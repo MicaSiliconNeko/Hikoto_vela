@@ -1,0 +1,21 @@
+{
+  "name": "hitokoto-vela-app",
+  "version": "1.0.0",
+  "description": "小米手环 Vela 一言应用",
+  "scripts": {
+    "build": "quickapp build",
+    "release": "quickapp release",
+    "server": "quickapp server",
+    "watch": "quickapp watch"
+  },
+  "devDependencies": {
+    "hap-toolkit": "^2.0.0"
+  },
+  "keywords": [
+    "hitokoto",
+    "vela",
+    "quickapp"
+  ],
+  "author": "",
+  "license": "MIT"
+}
