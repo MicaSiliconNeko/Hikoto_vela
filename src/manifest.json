@@ -8,6 +8,12 @@
   "features": [
     {
       "name": "system.storage"
+    },
+    {
+      "name": "system.router"
+    },
+    {
+      "name": "system.prompt"
     }
   ],
   "permissions": [],
