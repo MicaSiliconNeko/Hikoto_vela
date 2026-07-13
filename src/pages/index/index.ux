@@ -144,6 +144,10 @@
       } else {
         this.hint = '已收藏 ' + favorites.length + ' 条';
       }
+    },
+    onBackPress() {
+      // 右滑返回时退出应用（首页）
+      return false;
     }
   };
 </script>
