@@ -1,3 +1,1 @@
-Nothing should be ignored based on the provided file changes. The modified files (`src/pages/index/index.ux` and `src/pages/search/index.ux`) are source code files and do not fall under any of the categories that should be added to `.gitignore`. 
-
-Therefore, the output is empty.
+(src/app.ux)
