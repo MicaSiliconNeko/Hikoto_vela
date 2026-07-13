@@ -1,0 +1,11 @@
+{
+  "defaults": {
+    "app_name": "一言"
+  },
+  "zh-CN": {
+    "app_name": "一言"
+  },
+  "en": {
+    "app_name": "Hitokoto"
+  }
+}
