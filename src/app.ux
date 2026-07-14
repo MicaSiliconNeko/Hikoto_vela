@@ -1,7 +1,5 @@
-import router from '@system.router';
-
 export default {
-  onInit() {
-    console.info('一言应用初始化');
+  onCreate() {
+    console.info('一言应用已创建');
   }
 }
