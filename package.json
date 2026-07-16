@@ -1,0 +1,21 @@
+{
+  "name": "hitokoto-vela-app",
+  "version": "1.0.0",
+  "description": "小米手环 Vela 一言应用",
+  "scripts": {
+    "build": "aiot build",
+    "release": "aiot release",
+    "server": "aiot server",
+    "watch": "aiot watch"
+  },
+  "devDependencies": {
+    "aiot-toolkit": "^2.0.0"
+  },
+  "keywords": [
+    "hitokoto",
+    "vela",
+    "quickapp"
+  ],
+  "author": "",
+  "license": "MIT"
+}

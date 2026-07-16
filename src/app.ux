@@ -1,0 +1,21 @@
+<script>
+  /**
+   * 应用级别的逻辑与生命周期
+   */
+  export default {
+    // 应用创建时触发
+    onCreate() {
+      console.info('一言应用启动')
+    },
+    
+    // 应用销毁时触发
+    onDestroy() {
+      console.info('一言应用销毁')
+    },
+    
+    // 应用发生全局错误时触发（建议加上）
+    onError() {
+      console.info('应用发生未知错误')
+    }
+  }
+</script>

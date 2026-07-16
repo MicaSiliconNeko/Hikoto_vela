@@ -1,0 +1,97 @@
+<template>
+  <div class="container">
+    <text class="page-title">关于</text>
+
+    <div class="block">
+      <text class="label">数据来源</text>
+      <text class="value">句子来源于一言开放句子库</text>
+      <text class="link-text">hitokoto.cn</text>
+    </div>
+
+    <div class="block">
+      <text class="label">开源仓库链接</text>
+      <text class="value">Hikoto_vela</text>
+      <text class="link-text">github.com/MicaSiliconNeko/Hikoto_vela</text>
+    </div>
+
+    <div class="block">
+      <text class="label">句子数量</text>
+      <text class="value">4000条精选</text>
+    </div>
+
+    <div class="block">
+      <text class="label">版权声明</text>
+      <text class="value">本应用遵守一言句子库使用协议，句子版权归原作者所有</text>
+    </div>
+
+    <input type="button" value="返回" class="btn-back" onclick="goBack" />
+  </div>
+</template>
+
+<style>
+  .container {
+    flex-direction: column;
+    padding: 20px 28px;
+    background-color: #000000;
+  }
+
+  .page-title {
+    font-size: 32px;
+    color: #ffffff;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 24px;
+  }
+
+  .block {
+    flex-direction: column;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+    background-color: #1a1a1a;
+    border-radius: 10px;
+  }
+
+  .label {
+    font-size: 22px;
+    color: #888888;
+    margin-bottom: 6px;
+  }
+
+  .value {
+    font-size: 24px;
+    color: #ffffff;
+    width: 100%;
+  }
+
+  .link-text {
+    font-size: 20px;
+    color: #66aaff;
+    width: 100%;
+    margin-top: 6px;
+  }
+
+  .btn-back {
+    width: 100%;
+    height: 54px;
+    font-size: 24px;
+    text-align: center;
+    border-radius: 8px;
+    background-color: #333333;
+    color: #ffffff;
+    margin-top: 10px;
+  }
+</style>
+
+<script>
+  import router from '@system.router';
+
+  export default {
+    goBack() {
+      router.back();
+    },
+    onBackPress() {
+      router.back();
+      return true;
+    }
+  };
+</script>

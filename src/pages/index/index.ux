@@ -1,0 +1,152 @@
+<template>
+  <div class="container">
+    <!-- 顶部栏 -->
+    <div class="topbar">
+      <text class="title">一言</text>
+      <input type="button" value="关于" class="btn-about" onclick="goToAbout" />
+    </div>
+
+    <!-- 内容区 -->
+    <div class="content-box">
+      <text class="hitokoto-text">{{currentText}}</text>
+      <text class="from-text" if="currentFrom !== ''">{{currentFrom}}</text>
+    </div>
+
+    <!-- 按钮 -->
+    <div class="button-row">
+      <input type="button" value="刷新" class="btn-primary" onclick="refreshSentence" />
+      <input type="button" value="搜索" class="btn-primary" onclick="goToSearch" />
+    </div>
+
+    <!-- 提示 -->
+    <text class="hint">{{hint}}</text>
+  </div>
+</template>
+
+<style>
+  .container {
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 20px 28px;
+    background-color: #000000;
+  }
+
+  .topbar {
+    flex-direction: row;
+    justify-content: flex-end;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 10px;
+  }
+
+  .title {
+    font-size: 30px;
+    color: #ffffff;
+    font-weight: bold;
+    flex: 1;
+    text-align: center;
+  }
+
+  .btn-about {
+    width: 70px;
+    height: 40px;
+    font-size: 20px;
+    text-align: center;
+    border-radius: 6px;
+    background-color: #333333;
+    color: #aaaaaa;
+  }
+
+  .content-box {
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    min-height: 160px;
+    margin-bottom: 30px;
+    padding: 28px 22px;
+    background-color: #1a1a1a;
+    border-radius: 12px;
+  }
+
+  .hitokoto-text {
+    font-size: 36px;
+    color: #ffffff;
+    text-align: center;
+    width: 100%;
+  }
+
+  .from-text {
+    font-size: 22px;
+    color: #999999;
+    text-align: right;
+    width: 100%;
+    margin-top: 16px;
+  }
+
+  .button-row {
+    flex-direction: row;
+    justify-content: space-around;
+    width: 100%;
+    margin-bottom: 15px;
+  }
+
+  .btn-primary {
+    width: 45%;
+    height: 72px;
+    font-size: 28px;
+    text-align: center;
+    border-radius: 10px;
+    background-color: #0066ff;
+    color: #ffffff;
+  }
+
+  .hint {
+    font-size: 20px;
+    color: #666666;
+    margin-top: 8px;
+    text-align: center;
+    width: 100%;
+  }
+</style>
+
+<script>
+  import logic from '../../common/scripts/logic.js';
+  import router from '@system.router';
+
+  export default {
+    data: {
+      currentText: '',
+      currentFrom: '',
+      hint: ''
+    },
+    onInit() {
+      logic.init();
+      const x = logic.getRandom();
+      if (x) {
+        this.currentText = x.t;
+        this.currentFrom = x.f ? '—— ' + x.f : '';
+      }
+    },
+    refreshSentence() {
+      this.hint = '';
+      const x = logic.getRandom();
+      if (!x) {
+        this.currentText = '暂无数据';
+        return;
+      }
+      this.currentText = x.t;
+      this.currentFrom = x.f ? '—— ' + x.f : '';
+    },
+    goToSearch() {
+      router.push({ uri: 'pages/search' });
+    },
+    goToAbout() {
+      router.push({ uri: 'pages/about' });
+    },
+    onBackPress() {
+      return false;
+    }
+  };
+</script>
