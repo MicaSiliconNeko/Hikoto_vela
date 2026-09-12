@@ -1,68 +1,77 @@
-# 一言小程序
-小米手环 Vela 系统上的一言快应用。随机展示名言/台词，支持按出处搜索。目前在虚拟机都能用，但实体机就显示不出句子………
-纯由AI制作！作者不懂任何开发！哪位大佬来教教吾喵！
-感谢DS，Qwen，GPTkimi对本应用的开发！
+# 一言 · Hitokoto
+
+小米手环 / 小米手表（VelaOS 快应用）上的一言阅读器。
+
+> 数据来源：[一言开放句子库 hitokoto.cn](https://hitokoto.cn)，已清洗、去重、审核后打包进本地数据文件，**离线可用，不依赖网络**。
+
 ## 功能
 
-- **随机一言** — 每次打开/刷新随机展示一句精选名言
-- **按出处搜索** — 支持拼音/中文关键词搜索，结果分页浏览
-- **关于页面** — 数据来源说明、开源链接、版权声明
+- **随机一言**：每句附出处，支持"换一句"
+- **出处搜索**：输入关键词，只搜"出处"（作品 / 作者 / 歌曲），命中后上一句 / 下一句翻看，上限 200 条
+- **长句自适应**：正文按字数自动缩字号，保证任意一句完整显示在一屏内
+- **屏幕形状自适应**：方屏（rect）/ 药丸屏（pill-shaped）/ 圆屏（circle）自动匹配键盘布局
+- **关于页**：显示句子总数与出处总数
 
-## 数据
+## 下载安装（不需要自己编译）
 
-精选 **4000 条**高质量句子，来源包括：
-- 文学名著（百年孤独、活着、围城……）
-- 影视经典（肖申克、阿甘正传、教父……）
-- 动漫金句（海贼王、火影、Clannad……）
-- 哲学思想（尼采、柏拉图、老子、庄子……）
-- 诗词歌赋（李白、苏轼、李清照……）
-- 及更多精心挑选的内容
+到 **[懒得发包了_如果你需要rpk看这](./懒得发包了_如果你需要rpk看这)** 文件夹拿现成的 rpk 包：
 
-数据来自 [一言开放句子库](https://hitokoto.cn/)，遵守其使用协议。
+| 文件 | 句子数 | 体积 | 说明 |
+|---|---|---|---|
+| `com.hikoto.app.v1.4.1.rpk` | 5000 | 650 KB | **稳定版，推荐** |
+| `com.hikoto.app.v1.4.2.rpk` | 7000 | 785 KB | 实验版：数据分 8 个文件加载 |
 
-## 项目结构
-hikoto-build/
-├── src/
-│   ├── manifest.json                    # 应用配置
-│   ├── app.ux                           # 应用入口
-│   ├── components/
-│   │   └── InputMethod/
-│   │       ├── InputMethod.ux           # 输入法组件，来自于大佬的
-│   │       └── assets/                  # 键盘资源文件
-│   ├── common/
-│   │   ├── images/
-│   │   │   └── icon.png                 # 应用图标
-│   │   └── scripts/
-│   │       ├── data.js                  # 4000 条句子数据
-│   │       └── logic.js                 # 业务逻辑
-│   ├── pages/
-│   │   ├── index/index.ux               # 主页（随机一言 + 导航）
-│   │   ├── search/search.ux             # 搜索页（按出处 + 分页）
-│   │   └── about/about.ux               # 关于页
-│   └── i18n/                            # 多语言配置
-├── package.json
-└── .gitignore
+安装：在小米运动健康 / AIoT IDE 中安装 rpk，或 `adb push xxx.rpk /data/quickapp/app/` 后 `pm install`。
 
+## 数据规模与出处覆盖
 
-## 快速开始
+- 稳定版 **5000 条句子，覆盖全部 4382 个出处**——搜索按出处进行，任何出处都能搜到
+- 数据结构为三张表：`SRC`（去重出处）/ `SRC_S`（前缀偏移，句子按出处聚簇）/ `TXT`（正文），
+  每条句子打包成本从 147B 压到 90B
+- 清洗规则：去重、去零宽字符、去除纯日文 / 颜文字等手环无法渲染的内容、
+  关键词审核（词表见 `tools/moderation.py`，可自行调整后重新生成）
 
-### 环境要求
+## 目录结构
 
-- Node.js v18+
-- 小米 Vela 快应用开发工具（AIoT-IDE 或 CLI）
+```
+src/
+├── manifest.json              # 应用配置（designWidth=device-width）
+├── app.ux                     # 全局：屏幕形状探测
+├── pages/
+│   ├── index/index.ux         # 主页：随机一言
+│   ├── search/search.ux       # 搜索页：按出处搜索
+│   └── about/about.ux         # 关于页
+├── components/InputMethod/    # 官方键盘组件（自带拼音词库）
+└── common/scripts/
+    ├── data.js                # 句子数据（生成，勿手改）
+    ├── logic.js               # 数据访问门面
+    └── meta.js                # 计数常量（供关于页使用）
+sign/                          # release 构建签名证书（工具链默认证书）
+```
 
-### 安装
+## 自己构建
+
+环境：node ≥ 22，`npm install` 后：
 
 ```bash
-npm install
-构建
-npm run build      # 开发模式
-npm run release    # 发布模式
-构建产物在 dist/ 目录下，格式为 .rpk。
+# 稳定版（5000 句，单文件数据）
+node node_modules/aiot-toolkit/lib/bin.js release
 
-技术栈
-小米 Vela 快应用框架
-UX 模板 + CSS 语法
-Vela InputMethod 输入法组件
-License
-MIT
+# 实验版（7000 句，数据分 8 片）
+python tools/gen_data.py 100 7000 200 --split 8
+node node_modules/aiot-toolkit/lib/bin.js release
+```
+
+- 必须用 `release` 构建（debug 构建不压缩，页面包会超 1MB 上限）
+- `sign/` 里是 Vela 工具链自带的默认证书，正式发布请替换为自己的
+- 修改句子数量 / 审核尺度：改 `tools/gen_data.py` 参数与 `tools/moderation.py`，
+  句子数下限为 4382（保证出处全覆盖），上限受手环 JS 堆限制（单文件数据约 5000~6000）
+
+## 已知限制
+
+- Vela 竖向 `scroll` 在部分真机上不响应，长正文依赖自动缩字号而非滚动
+- 句子库为离线打包，更新句子需重新生成数据并构建
+
+## License
+
+[MIT](./LICENSE) · 数据来自 [hitokoto.cn](https://hitokoto.cn)
