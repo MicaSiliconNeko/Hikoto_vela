@@ -21,7 +21,7 @@
 | `com.hikoto.app.v1.4.1.rpk` | 5000 | 650 KB | **稳定版，推荐** |
 | `com.hikoto.app.v1.4.2.rpk` | 7000 | 785 KB | 实验版：数据分 8 个文件加载 |
 
-安装：在小米运动健康 / AIoT IDE 中安装 rpk，或 `adb push xxx.rpk /data/quickapp/app/` 后 `pm install`。
+安装：使用Astobox安装。
 
 ## 数据规模与出处覆盖
 
