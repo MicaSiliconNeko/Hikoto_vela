@@ -1,21 +1,47 @@
 <script>
   /**
-   * 应用级别的逻辑与生命周期
+   * 应用级逻辑：启动时探测屏幕形状，供页面适配圆屏 / 药丸屏 / 方屏。
    */
+  import device from '@system.device';
+
   export default {
-    // 应用创建时触发
+    // 屏幕形状：rect（方屏）/ circle（圆屏）/ pill-shaped（药丸屏，多数手环）
+    screenShape: 'rect',
+    screenWidth: 0,
+    screenHeight: 0,
+
     onCreate() {
-      console.info('一言应用启动')
+      console.info('一言：应用启动');
+      try {
+        device.getInfo({
+          success: (info) => {
+            const d = info || {};
+            this.screenShape = d.screenShape || 'rect';
+            this.screenWidth = d.screenWidth || 0;
+            this.screenHeight = d.screenHeight || 0;
+            console.info('一言：screenShape=' + this.screenShape +
+              ', screenWidth=' + this.screenWidth +
+              ', screenHeight=' + this.screenHeight);
+          },
+          fail: (err, code) => {
+            console.error('一言：device.getInfo 失败 code=' + code + ' ' + JSON.stringify(err));
+          }
+        });
+      } catch (e) {
+        console.error('一言：获取屏幕信息异常 ' + e);
+      }
     },
-    
-    // 应用销毁时触发
+
     onDestroy() {
-      console.info('一言应用销毁')
+      console.info('一言：应用销毁');
     },
-    
-    // 应用发生全局错误时触发（建议加上）
-    onError() {
-      console.info('应用发生未知错误')
+
+    onError(err) {
+      const msg = err && err.message ? err.message : String(err);
+      console.error('一言：应用发生错误 ' + msg);
+      if (err && err.stack) {
+        console.error('一言：错误堆栈 ' + err.stack);
+      }
     }
-  }
+  };
 </script>

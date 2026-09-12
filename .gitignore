@@ -4,3 +4,6 @@ dist/
 *.rpk
 *.zip
 .temp_*
+
+.workbuddy/
+.vs/

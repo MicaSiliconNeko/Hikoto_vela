@@ -1,34 +1,48 @@
 <template>
-  <div class="container">
-    <!-- 顶部栏 -->
+  <div class="page">
+    <!-- 顶部：标题 + 关于入口 -->
     <div class="topbar">
       <text class="title">一言</text>
-      <input type="button" value="关于" class="btn-about" onclick="goToAbout" />
+      <div class="btn-about" onclick="goToAbout">
+        <text class="btn-about-text">关于</text>
+      </div>
     </div>
 
-    <!-- 内容区 -->
+    <!-- 句子卡片：竖向 scroll（v1.4.0 结构原样保留） -->
     <div class="content-box">
-      <text class="hitokoto-text">{{currentText}}</text>
-      <text class="from-text" if="currentFrom !== ''">{{currentFrom}}</text>
+      <scroll id="sentenceScroll" class="text-scroll" scroll-y="{{true}}" bounces="{{true}}">
+        <div class="text-inner">
+          <text class="hitokoto-text">{{currentText}}</text>
+        </div>
+      </scroll>
+      <div class="meta-row">
+        <text class="scroll-tip" if="{{showScrollTip}}">可上下滑动</text>
+        <text class="from-text" if="{{showFrom}}">{{currentFrom}}</text>
+      </div>
     </div>
 
-    <!-- 按钮 -->
+    <!-- 操作 -->
     <div class="button-row">
-      <input type="button" value="刷新" class="btn-primary" onclick="refreshSentence" />
-      <input type="button" value="搜索" class="btn-primary" onclick="goToSearch" />
+      <div class="btn btn-primary" onclick="refreshSentence">
+        <text class="btn-text">换一句</text>
+      </div>
+      <div class="btn btn-primary" onclick="goToSearch">
+        <text class="btn-text">搜索</text>
+      </div>
     </div>
 
-    <!-- 提示 -->
-    <text class="hint">{{hint}}</text>
+    <text class="hint" if="{{showHint}}">{{hint}}</text>
   </div>
 </template>
 
 <style>
-  .container {
+  .page {
+    width: 100%;
+    height: 100%;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    padding: 20px 28px;
+    padding: 14px 18px;
     background-color: #000000;
   }
 
@@ -37,11 +51,12 @@
     justify-content: flex-end;
     align-items: center;
     width: 100%;
-    margin-bottom: 10px;
+    height: 44px;
+    margin-bottom: 8px;
   }
 
   .title {
-    font-size: 30px;
+    font-size: 28px;
     color: #ffffff;
     font-weight: bold;
     flex: 1;
@@ -49,102 +64,241 @@
   }
 
   .btn-about {
-    width: 70px;
-    height: 40px;
-    font-size: 20px;
-    text-align: center;
-    border-radius: 6px;
+    width: 64px;
+    height: 36px;
+    justify-content: center;
+    align-items: center;
+    border-radius: 8px;
     background-color: #333333;
-    color: #aaaaaa;
+  }
+
+  .btn-about-text {
+    font-size: 20px;
+    color: #cccccc;
+    text-align: center;
   }
 
   .content-box {
     flex-direction: column;
-    justify-content: center;
-    align-items: center;
+    flex: 1;
     width: 100%;
-    min-height: 160px;
-    margin-bottom: 30px;
-    padding: 28px 22px;
+    padding: 14px;
+    margin-bottom: 12px;
     background-color: #1a1a1a;
     border-radius: 12px;
   }
 
+  .text-scroll {
+    flex: 1;
+    width: 100%;
+  }
+
+  .text-inner {
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    min-height: 100%;
+  }
+
   .hitokoto-text {
-    font-size: 36px;
+    font-size: 26px;
     color: #ffffff;
     text-align: center;
     width: 100%;
   }
 
+  /* 出处行不定高：出处折几行，行就自动撑多高，正文区(flex:1)相应让位 */
+  .meta-row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-top: 8px;
+  }
+
+  .scroll-tip {
+    font-size: 16px;
+    color: #666666;
+  }
+
+  /* v1.4.0 是 lines:2，长出处被省略号截断；放宽到 4 行可完整显示全部出处 */
   .from-text {
-    font-size: 22px;
+    font-size: 20px;
     color: #999999;
     text-align: right;
-    width: 100%;
-    margin-top: 16px;
+    flex: 1;
+    lines: 4;
+    text-overflow: ellipsis;
+    margin-left: 8px;
   }
 
   .button-row {
     flex-direction: row;
-    justify-content: space-around;
+    justify-content: space-between;
+    align-items: center;
     width: 100%;
-    margin-bottom: 15px;
+    height: 56px;
+  }
+
+  .btn {
+    justify-content: center;
+    align-items: center;
+    border-radius: 12px;
   }
 
   .btn-primary {
-    width: 45%;
-    height: 72px;
-    font-size: 28px;
-    text-align: center;
-    border-radius: 10px;
+    width: 48%;
+    height: 56px;
     background-color: #0066ff;
+  }
+
+  .btn-text {
+    font-size: 26px;
     color: #ffffff;
+    text-align: center;
   }
 
   .hint {
-    font-size: 20px;
-    color: #666666;
-    margin-top: 8px;
+    font-size: 18px;
+    color: #888888;
     text-align: center;
     width: 100%;
+    lines: 2;
+    text-overflow: ellipsis;
+    margin-top: 8px;
   }
 </style>
 
 <script>
   import logic from '../../common/scripts/logic.js';
   import router from '@system.router';
+  import device from '@system.device';
 
   export default {
     data: {
-      currentText: '',
+      currentText: '加载中…',
       currentFrom: '',
-      hint: ''
+      showFrom: false,
+      showScrollTip: false,
+      hint: '',
+      showHint: false,
+      screenWidth: 0
     },
+
     onInit() {
-      logic.init();
-      const x = logic.getRandom();
-      if (x) {
-        this.currentText = x.t;
-        this.currentFrom = x.f ? '—— ' + x.f : '';
-      }
+      console.info('一言：主页 onInit');
+      this.syncScreenWidth();
+      this.loadRandom();
     },
-    refreshSentence() {
-      this.hint = '';
-      const x = logic.getRandom();
-      if (!x) {
-        this.currentText = '暂无数据';
+
+    onShow() {
+      this.syncScreenWidth();
+    },
+
+    /** 读屏宽（用于估算"可上下滑动"提示），拿不到就用兜底值。 */
+    syncScreenWidth() {
+      let w = 0;
+      try {
+        const app = this.$app;
+        w = app && app.$def && app.$def.screenWidth || 0;
+      } catch (e) {
+        w = 0;
+      }
+      if (w) {
+        this.screenWidth = w;
         return;
       }
-      this.currentText = x.t;
-      this.currentFrom = x.f ? '—— ' + x.f : '';
+      try {
+        device.getInfo({
+          success: (info) => {
+            if (info && info.screenWidth) {
+              this.screenWidth = info.screenWidth;
+              this.showScrollTip = this.needsScroll(this.currentText);
+            }
+          },
+          fail: () => {}
+        });
+      } catch (e) {
+        console.error('一言：主页获取屏幕信息异常 ' + e);
+      }
     },
+
+    /** 粗估正文是否超出一屏（26px 字号、8 行）。 */
+    needsScroll(text) {
+      if (!text) {
+        return false;
+      }
+      const perLine = Math.max(1, Math.floor(((this.screenWidth || 336) - 64) / 26));
+      return text.length > 8 * perLine;
+    },
+
+    /** 换内容后把滚动位置归零。 */
+    resetScroll() {
+      const self = this;
+      const toTop = () => {
+        try {
+          const el = self.$element('sentenceScroll');
+          if (el && el.scrollTo) {
+            el.scrollTo({ top: 0, behavior: 'instant' });
+          }
+        } catch (e) {
+          // 元素还没渲染好，忽略
+        }
+      };
+      toTop();
+      try {
+        setTimeout(toTop, 0);
+      } catch (e) {
+        // 忽略
+      }
+    },
+
+    /** 取一条随机句子并刷新界面。全程 try/catch，避免异常导致白屏。 */
+    loadRandom() {
+      try {
+        const total = logic.init();
+        console.info('一言：可用句子 ' + total + ' 条');
+        const item = logic.getRandom();
+        if (item && item.t) {
+          this.currentText = item.t;
+          this.currentFrom = item.f ? '—— ' + item.f : '';
+          this.showFrom = !!item.f;
+          this.showScrollTip = this.needsScroll(item.t);
+          this.hint = '';
+          this.showHint = false;
+        } else {
+          this.currentText = '暂无数据';
+          this.showFrom = false;
+          this.showScrollTip = false;
+          this.hint = '句子数据读取为空';
+          this.showHint = true;
+        }
+      } catch (e) {
+        const msg = (e && e.message) ? e.message : String(e);
+        console.error('一言：加载句子失败 ' + msg);
+        this.currentText = '加载失败';
+        this.showFrom = false;
+        this.showScrollTip = false;
+        this.hint = '错误：' + msg;
+        this.showHint = true;
+      }
+      this.resetScroll();
+    },
+
+    refreshSentence() {
+      this.loadRandom();
+    },
+
     goToSearch() {
       router.push({ uri: 'pages/search' });
     },
+
     goToAbout() {
       router.push({ uri: 'pages/about' });
     },
+
+    // 主页作为入口页，返回键不退出
     onBackPress() {
       return false;
     }

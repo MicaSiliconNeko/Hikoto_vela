@@ -1,94 +1,115 @@
 <template>
-  <div class="container">
-    <text class="page-title">关于</text>
+  <div class="a-page">
+    <text class="a-title">关于</text>
 
-    <div class="block">
-      <text class="label">数据来源</text>
-      <text class="value">句子来源于一言开放句子库</text>
-      <text class="link-text">hitokoto.cn</text>
+    <div class="a-block">
+      <text class="a-label">句子数量</text>
+      <text class="a-value">{{count}} 条</text>
     </div>
 
-    <div class="block">
-      <text class="label">开源仓库链接</text>
-      <text class="value">Hikoto_vela</text>
-      <text class="link-text">github.com/MicaSiliconNeko/Hikoto_vela</text>
+    <div class="a-block">
+      <text class="a-label">数据来源</text>
+      <text class="a-value">一言开放句子库</text>
+      <text class="a-link">hitokoto.cn</text>
     </div>
 
-    <div class="block">
-      <text class="label">句子数量</text>
-      <text class="value">4000条精选</text>
+    <div class="a-block">
+      <text class="a-label">开源仓库</text>
+      <text class="a-link">github.com/MicaSiliconNeko/Hikoto_vela</text>
     </div>
 
-    <div class="block">
-      <text class="label">版权声明</text>
-      <text class="value">本应用遵守一言句子库使用协议，句子版权归原作者所有</text>
+    <div class="a-block">
+      <text class="a-label">版权声明</text>
+      <text class="a-value">本应用遵守一言句子库使用协议，句子版权归原作者所有</text>
     </div>
 
-    <input type="button" value="返回" class="btn-back" onclick="goBack" />
+    <div class="a-btn" onclick="goBack">
+      <text class="a-btn-text">返回</text>
+    </div>
   </div>
 </template>
 
 <style>
-  .container {
+  .a-page {
+    width: 100%;
+    height: 100%;
     flex-direction: column;
-    padding: 20px 28px;
+    padding: 12px 16px;
     background-color: #000000;
   }
 
-  .page-title {
-    font-size: 32px;
+  .a-title {
+    font-size: 26px;
     color: #ffffff;
     font-weight: bold;
     text-align: center;
-    margin-bottom: 24px;
+    margin-bottom: 12px;
   }
 
-  .block {
+  .a-block {
     flex-direction: column;
-    padding: 14px 16px;
-    margin-bottom: 14px;
+    padding: 8px 10px;
+    margin-bottom: 8px;
     background-color: #1a1a1a;
-    border-radius: 10px;
+    border-radius: 8px;
+    width: 100%;
   }
 
-  .label {
-    font-size: 22px;
+  .a-label {
+    font-size: 18px;
     color: #888888;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
   }
 
-  .value {
-    font-size: 24px;
+  .a-value {
+    font-size: 20px;
     color: #ffffff;
     width: 100%;
   }
 
-  .link-text {
-    font-size: 20px;
+  .a-link {
+    font-size: 18px;
     color: #66aaff;
     width: 100%;
+    margin-top: 4px;
+  }
+
+  .a-btn {
+    width: 100%;
+    height: 46px;
+    justify-content: center;
+    align-items: center;
+    border-radius: 8px;
+    background-color: #333333;
     margin-top: 6px;
   }
 
-  .btn-back {
-    width: 100%;
-    height: 54px;
-    font-size: 24px;
-    text-align: center;
-    border-radius: 8px;
-    background-color: #333333;
+  .a-btn-text {
+    font-size: 22px;
     color: #ffffff;
-    margin-top: 10px;
+    text-align: center;
   }
 </style>
 
 <script>
   import router from '@system.router';
+  // 只引入计数用小文件。千万不要在这里 import logic.js ——
+  // 那会把整份句子库再打包进 about 页，白白多出一个 1MB 的包。
+  import meta from '../../common/scripts/meta.js';
 
   export default {
+    data: {
+      count: 0
+    },
+
+    onInit() {
+      this.count = meta.COUNT || 0;
+    },
+
     goBack() {
       router.back();
     },
+
     onBackPress() {
       router.back();
       return true;

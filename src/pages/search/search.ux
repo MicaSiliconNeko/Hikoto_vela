@@ -1,44 +1,62 @@
 <import name="input-method" src="../../components/InputMethod/InputMethod.ux"></import>
 
 <template>
-  <div class="container">
-    <!-- ===== 顶部栏：返回 + 分页信息 ===== -->
-    <div class="topbar">
-      <input type="button" value="← 返回" class="btn-top-back" onclick="goBack" />
-      <text class="page-info" if="hasResults">{{pageCurrent}} / {{pageTotal}}</text>
+  <!-- 注意：根节点不要使用 class="page"，
+       InputMethod 组件内部的 .page 是 position:absolute，样式会互相污染。 -->
+  <div class="s-page">
+    <!-- 顶部：返回 + 命中条数 -->
+    <div class="s-topbar">
+      <div class="s-back" onclick="goBack">
+        <text class="s-back-text">返回</text>
+      </div>
+      <text class="s-pageinfo" if="{{hasResults}}">{{pageCurrent}} / {{pageTotal}}</text>
     </div>
 
-    <!-- ===== 输入区域 ===== -->
-    <div class="input-area">
-      <div class="display-box" onclick="showKeyboard">
-        <text class="display-text" if="searchText !== ''">{{searchText}}</text>
-        <text class="display-placeholder" if="searchText === ''">输入出处关键词</text>
-      </div>
-      <div class="button-row">
-        <input type="button" value="搜索" class="btn-primary" onclick="doSearch" />
-        <input type="button" value="清空" class="btn-secondary" onclick="clearInput" />
-      </div>
+    <!-- 输入框（点击唤起键盘） -->
+    <div class="s-inputbox" onclick="showKeyboard">
+      <text class="s-inputtext" if="{{hasInput}}">{{searchText}}</text>
+      <text class="s-ph" if="{{showPlaceholder}}">点这里输入出处</text>
     </div>
 
-    <!-- ===== 结果展示区（分页：每次只显示一条） ===== -->
-    <div class="result-area" if="hasResults">
-      <div class="nav-row">
-        <input type="button" value="上一句" class="btn-nav" onclick="prevPage" />
-        <input type="button" value="下一句" class="btn-nav" onclick="nextPage" />
+    <!-- 操作按钮 -->
+    <div class="s-row">
+      <div class="s-btn s-btn-primary" onclick="doSearch">
+        <text class="s-btn-text">搜索</text>
       </div>
-      <div class="result-card">
-        <text class="result-text">{{pageItem.t}}</text>
-        <text class="result-from">{{pageItem.f}}</text>
+      <div class="s-btn s-btn-secondary" onclick="clearInput">
+        <text class="s-btn-text">清空</text>
       </div>
     </div>
 
-    <text class="empty-hint" if="!hasResults && extraText !== ''">{{extraText}}</text>
+    <!-- 结果（键盘弹出时自动隐藏，避免被遮挡） -->
+    <div class="s-result" if="{{showResult}}">
+      <div class="s-nav">
+        <div class="s-btn s-navbtn" onclick="prevPage">
+          <text class="s-btn-text">上一句</text>
+        </div>
+        <div class="s-btn s-navbtn" onclick="nextPage">
+          <text class="s-btn-text">下一句</text>
+        </div>
+      </div>
+      <div class="s-card">
+        <scroll id="resultScroll" class="s-text-scroll" scroll-y="{{true}}" bounces="{{true}}">
+          <div class="s-text-inner">
+            <text class="s-cardtext">{{pageText}}</text>
+          </div>
+        </scroll>
+        <div class="s-meta-row">
+          <text class="s-scroll-tip" if="{{showScrollTip}}">可上下滑动</text>
+          <text class="s-cardfrom" if="{{showFrom}}">{{pageFrom}}</text>
+        </div>
+      </div>
+    </div>
 
-    <!-- ===== 键盘组件 ===== -->
+    <text class="s-hint" if="{{showHint}}">{{extraText}}</text>
+
     <input-method
       hide="{{keyboardHidden}}"
       keyboardtype="QWERTY"
-      screentype="rect"
+      screentype="{{screenType}}"
       maxlength="8"
       oncomplete="onInputComplete"
       ondelete="onInputDelete"
@@ -47,240 +65,420 @@
 </template>
 
 <style>
-  .container {
+  .s-page {
+    width: 100%;
+    height: 100%;
     flex-direction: column;
-    padding: 20px 28px;
+    padding: 10px 14px;
     background-color: #000000;
   }
 
-  /* 顶部栏 */
-  .topbar {
+  .s-topbar {
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
     width: 100%;
-    margin-bottom: 8px;
-  }
-
-  .btn-top-back {
-    width: 100px;
-    height: 48px;
-    font-size: 24px;
-    text-align: center;
-    border-radius: 8px;
-    background-color: #444444;
-    color: #ffffff;
-  }
-
-  .page-info {
-    font-size: 24px;
-    color: #aaaaaa;
-  }
-
-  /* 输入区域 */
-  .input-area {
-    flex-direction: column;
-    width: 100%;
-    margin-bottom: 8px;
-  }
-
-  .display-box {
-    width: 100%;
-    min-height: 50px;
-    padding: 8px 14px;
-    margin-bottom: 8px;
-    border: 1px solid #444444;
-    border-radius: 8px;
-    background-color: #2a2a2a;
-    justify-content: center;
-  }
-
-  .display-text {
-    font-size: 26px;
-    color: #ffffff;
-  }
-
-  .display-placeholder {
-    font-size: 24px;
-    color: #666666;
-  }
-
-  .button-row {
-    flex-direction: row;
-    justify-content: space-between;
-    width: 100%;
-  }
-
-  .btn-primary {
-    width: 48%;
-    height: 54px;
-    font-size: 26px;
-    text-align: center;
-    border-radius: 8px;
-    background-color: #0066ff;
-    color: #ffffff;
-  }
-
-  .btn-secondary {
-    width: 48%;
-    height: 54px;
-    font-size: 26px;
-    text-align: center;
-    border-radius: 8px;
-    background-color: #333333;
-    color: #ffffff;
-  }
-
-  /* 结果区域 */
-  .result-area {
-    flex-direction: column;
-    width: 100%;
-    margin-bottom: 8px;
-  }
-
-  .nav-row {
-    flex-direction: row;
-    justify-content: space-between;
-    width: 100%;
+    height: 38px;
     margin-bottom: 6px;
   }
 
-  .btn-nav {
-    width: 48%;
-    height: 48px;
-    font-size: 22px;
-    text-align: center;
+  .s-back {
+    width: 74px;
+    height: 34px;
+    justify-content: center;
+    align-items: center;
     border-radius: 8px;
-    background-color: #555555;
-    color: #ffffff;
+    background-color: #444444;
   }
 
-  .result-card {
+  .s-back-text {
+    font-size: 20px;
+    color: #ffffff;
+    text-align: center;
+  }
+
+  .s-pageinfo {
+    font-size: 20px;
+    color: #aaaaaa;
+  }
+
+  .s-inputbox {
+    width: 100%;
+    height: 46px;
+    justify-content: center;
+    align-items: center;
+    border: 1px solid #444444;
+    border-radius: 8px;
+    background-color: #2a2a2a;
+    margin-bottom: 6px;
+  }
+
+  .s-inputtext {
+    font-size: 24px;
+    color: #ffffff;
+    text-align: center;
+    width: 100%;
+    lines: 1;
+    text-overflow: ellipsis;
+  }
+
+  .s-ph {
+    font-size: 22px;
+    color: #777777;
+    text-align: center;
+    width: 100%;
+  }
+
+  .s-row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    height: 46px;
+    margin-bottom: 6px;
+  }
+
+  .s-btn {
+    justify-content: center;
+    align-items: center;
+    border-radius: 10px;
+  }
+
+  .s-btn-primary {
+    width: 48%;
+    height: 46px;
+    background-color: #0066ff;
+  }
+
+  .s-btn-secondary {
+    width: 48%;
+    height: 46px;
+    background-color: #333333;
+  }
+
+  .s-btn-text {
+    font-size: 22px;
+    color: #ffffff;
+    text-align: center;
+  }
+
+  .s-result {
     flex-direction: column;
-    padding: 16px;
+    flex: 1;
+    width: 100%;
+  }
+
+  .s-nav {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    height: 42px;
+    margin-bottom: 6px;
+  }
+
+  .s-navbtn {
+    width: 48%;
+    height: 42px;
+    background-color: #555555;
+  }
+
+  .s-card {
+    flex-direction: column;
+    flex: 1;
+    width: 100%;
+    padding: 10px;
     background-color: #1a1a1a;
     border-radius: 10px;
+  }
+
+  .s-text-scroll {
+    flex: 1;
     width: 100%;
   }
 
-  .result-text {
-    font-size: 30px;
-    color: #ffffff;
+  .s-text-inner {
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
     width: 100%;
+    min-height: 100%;
   }
 
-  .result-from {
+  .s-cardtext {
     font-size: 24px;
+    color: #ffffff;
+    text-align: center;
+    width: 100%;
+  }
+
+  /* 出处行不定高：出处折几行，行就自动撑多高，正文区(flex:1)相应让位 */
+  .s-meta-row {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-top: 6px;
+  }
+
+  .s-scroll-tip {
+    font-size: 16px;
+    color: #666666;
+  }
+
+  /* v1.4.0 是 lines:2，长出处被省略号截断；放宽到 4 行可完整显示全部出处 */
+  .s-cardfrom {
+    font-size: 20px;
     color: #999999;
     text-align: right;
-    width: 100%;
-    margin-top: 8px;
+    flex: 1;
+    lines: 4;
+    text-overflow: ellipsis;
+    margin-left: 8px;
   }
 
-  .empty-hint {
-    font-size: 22px;
-    color: #555555;
+  .s-hint {
+    font-size: 20px;
+    color: #777777;
     text-align: center;
-    margin-top: 30px;
     width: 100%;
+    margin-top: 16px;
   }
 </style>
 
 <script>
   import logic from '../../common/scripts/logic.js';
-  import { ps } from '../../common/scripts/data.js';
   import router from '@system.router';
-
-  // 每页显示的条数
-  const PAGE_SIZE = 1;
+  import device from '@system.device';
 
   export default {
     data: {
       searchText: '',
-      // 全部搜索结果（原始数据）
-      allResults: [],
-      // 当前可见的结果
+      // 命中的结果 {idx, t, f}
       results: [],
       hasResults: false,
+      hasInput: false,
       extraText: '输入出处关键词搜索',
-      // 页面状态
+      showHint: true,
+      // 分页
       pageCurrent: 0,
       pageTotal: 0,
-      pageItem: { t: '', f: '' },
-      // 键盘
-      keyboardHidden: false,
-      searched: false
+      pageText: '',
+      pageFrom: '',
+      showFrom: false,
+      showScrollTip: false,
+      // 显隐开关，集中计算，避免模板里写复杂表达式
+      showResult: false,
+      showPlaceholder: true,
+      keyboardHidden: true,
+      // 键盘布局：rect / pill-shaped / circle
+      screenType: 'rect',
+      screenWidth: 0
     },
+
     onInit() {
-      console.info('搜索页初始化');
+      console.info('一言：搜索页 onInit');
+      // 先用应用级结果（同步可得），拿不到就保持 rect —— 绝不能默认 circle，
+      // 否则方屏/药丸屏会走到 480x321 的圆屏键盘布局上。
+      let shape = '';
+      try {
+        const app = this.$app;
+        shape = app && app.$def && app.$def.screenShape || '';
+        this.screenWidth = app && app.$def && app.$def.screenWidth || 0;
+      } catch (e) {
+        shape = '';
+      }
+      this.applyShape(shape);
+      this.detectShape();
+      this.refresh();
     },
+
+    onShow() {
+      this.detectShape();
+    },
+
+    detectShape() {
+      try {
+        device.getInfo({
+          success: (info) => {
+            if (!info) {
+              return;
+            }
+            if (info.screenShape) {
+              this.applyShape(info.screenShape);
+            }
+            if (info.screenWidth) {
+              this.screenWidth = info.screenWidth;
+              this.showScrollTip = this.needsScroll(this.pageText);
+            }
+          },
+          fail: () => {}
+        });
+      } catch (e) {
+        console.error('一言：搜索页获取屏幕信息异常 ' + e);
+      }
+    },
+
+    applyShape(shape) {
+      if (shape === 'circle' || shape === 'pill-shaped' || shape === 'rect') {
+        if (this.screenType !== shape) {
+          this.screenType = shape;
+          console.info('一言：搜索页 screentype=' + shape);
+        }
+      }
+    },
+
+    /** 粗估正文是否超出一屏（24px 字号、8 行）。 */
+    needsScroll(text) {
+      if (!text) {
+        return false;
+      }
+      const perLine = Math.max(1, Math.floor(((this.screenWidth || 336) - 48) / 24));
+      return text.length > 8 * perLine;
+    },
+
+    /** 换内容后把滚动位置归零。 */
+    resetScroll() {
+      const self = this;
+      const toTop = () => {
+        try {
+          const el = self.$element('resultScroll');
+          if (el && el.scrollTo) {
+            el.scrollTo({ top: 0, behavior: 'instant' });
+          }
+        } catch (e) {
+          // 元素还没渲染好，忽略
+        }
+      };
+      toTop();
+      try {
+        setTimeout(toTop, 0);
+      } catch (e) {
+        // 忽略
+      }
+    },
+
+    /** 统一刷新显隐状态。 */
+    refresh() {
+      this.hasInput = this.searchText !== '';
+      this.showPlaceholder = !this.hasInput;
+      this.showResult = this.hasResults && this.keyboardHidden;
+      this.showHint = !this.hasResults && this.extraText !== '';
+    },
+
     onInputComplete(e) {
-      const content = e.detail && e.detail.content || '';
+      const content = e && e.detail && e.detail.content || '';
       this.searchText = (this.searchText || '') + content;
+      this.refresh();
     },
+
     onInputDelete() {
       if (this.searchText && this.searchText.length > 0) {
         this.searchText = this.searchText.substring(0, this.searchText.length - 1);
       }
+      this.refresh();
     },
+
     showKeyboard() {
       this.keyboardHidden = false;
+      this.refresh();
     },
+
     doSearch() {
       const k = (this.searchText || '').trim();
-      if (!k) return;
-      // 隐藏键盘
       this.keyboardHidden = true;
-      const all = logic.search(k);
-      if (!all.length) {
+
+      if (!k) {
         this.hasResults = false;
-        this.extraText = '未找到';
+        this.results = [];
+        this.extraText = '请先输入关键词';
+        this.refresh();
         return;
       }
-      // 解析所有结果
-      const mapped = [];
-      for (let i = 0; i < all.length; i++) {
-        const parsed = ps(all[i].raw);
-        mapped.push({
-          t: parsed.t,
-          f: parsed.f ? '—— ' + parsed.f : ''
-        });
+
+      let found = [];
+      try {
+        found = logic.search(k) || [];
+      } catch (e) {
+        const msg = (e && e.message) ? e.message : String(e);
+        console.error('一言：搜索失败 ' + msg);
+        this.hasResults = false;
+        this.results = [];
+        this.extraText = '搜索出错：' + msg;
+        this.refresh();
+        return;
       }
-      this.allResults = mapped;
+
+      if (!found.length) {
+        this.hasResults = false;
+        this.results = [];
+        this.extraText = '没有找到出处包含「' + k + '」的句子';
+        this.refresh();
+        return;
+      }
+
+      this.results = found;
       this.hasResults = true;
       this.extraText = '';
-      // 分页
-      this.pageCurrent = 1;
-      this.pageTotal = mapped.length;
+      this.pageTotal = found.length;
+      console.info('一言：搜索「' + k + '」命中 ' + found.length + ' 条');
       this.showPage(1);
     },
+
     showPage(n) {
-      if (n < 1 || n > this.allResults.length) return;
+      if (n < 1 || n > this.results.length) {
+        return;
+      }
+      const it = this.results[n - 1];
       this.pageCurrent = n;
-      this.pageItem = this.allResults[n - 1];
+      this.pageText = it.t;
+      this.pageFrom = it.f ? '—— ' + it.f : '';
+      this.showFrom = !!it.f;
+      this.showScrollTip = this.needsScroll(it.t);
+      this.refresh();
+      this.resetScroll();
     },
+
     prevPage() {
       if (this.pageCurrent > 1) {
         this.showPage(this.pageCurrent - 1);
       }
     },
+
     nextPage() {
-      if (this.pageCurrent < this.allResults.length) {
+      if (this.pageCurrent < this.results.length) {
         this.showPage(this.pageCurrent + 1);
       }
     },
+
     clearInput() {
       this.searchText = '';
-      this.allResults = [];
+      this.results = [];
       this.hasResults = false;
+      this.pageCurrent = 0;
+      this.pageTotal = 0;
+      this.pageText = '';
+      this.pageFrom = '';
+      this.showFrom = false;
+      this.showScrollTip = false;
       this.extraText = '输入出处关键词搜索';
-      this.keyboardHidden = false;
+      this.keyboardHidden = true;
+      this.refresh();
     },
+
     goBack() {
+      this.keyboardHidden = true;
       router.back();
     },
+
     onBackPress() {
-      router.back();
+      // 键盘开着就先收键盘，再按一次才返回，避免误退出
+      if (this.keyboardHidden) {
+        router.back();
+      } else {
+        this.keyboardHidden = true;
+        this.refresh();
+      }
       return true;
     }
   };
