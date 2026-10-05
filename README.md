@@ -69,6 +69,9 @@ node node_modules/aiot-toolkit/lib/bin.js release
 
 ## 实现上的几个坑（改代码前建议先看）
 
+- **应用图标是 `src/common/logo.png`**（平台按约定读取这个文件），manifest 里的
+  `icon` 也指向它。换图标**只改 logo.png 就够了**——只改 `common/images/icon.png`
+  不会生效，而且会白占一份体积。
 - **正文不要放进 `<scroll>`**：真机上 scroll 内部拿不到 `width:100%`，内部盒子会退化成
   按内容宽度收缩，整块文字贴向一边。正文用普通 `<div>`，由卡片容器自己居中。
 - **不要用「动态绑定的 style」**（如 `style="font-size: {{x}}px"`）：实测它会显著增加运行时开销，

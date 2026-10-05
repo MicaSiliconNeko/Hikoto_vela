@@ -4,7 +4,7 @@
   "versionName": "1.4.6",
   "versionCode": 12,
   "minPlatformVersion": 1000,
-  "icon": "/common/images/icon.png",
+  "icon": "/common/logo.png",
   "deviceTypeList": [
     "watch"
   ],
