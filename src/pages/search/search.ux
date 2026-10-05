@@ -28,7 +28,8 @@
       </div>
     </div>
 
-    <!-- 结果（键盘弹出时自动隐藏，避免被遮挡） -->
+    <!-- 结果（键盘弹出时自动隐藏，避免被遮挡）
+         与首页同理：不用 scroll，卡片自己居中；长句靠自动缩字号完整显示 -->
     <div class="s-result" if="{{showResult}}">
       <div class="s-nav">
         <div class="s-btn s-navbtn" onclick="prevPage">
@@ -39,15 +40,10 @@
         </div>
       </div>
       <div class="s-card">
-        <scroll id="resultScroll" class="s-text-scroll" scroll-y="{{true}}" bounces="{{true}}">
-          <div class="s-text-inner">
-            <text class="s-cardtext">{{pageText}}</text>
-          </div>
-        </scroll>
-        <div class="s-meta-row">
-          <text class="s-scroll-tip" if="{{showScrollTip}}">可上下滑动</text>
-          <text class="s-cardfrom" if="{{showFrom}}">{{pageFrom}}</text>
+        <div class="s-text-area">
+          <text class="s-cardtext" style="font-size: {{textFontSize}}px">{{pageText}}</text>
         </div>
+        <text class="s-cardfrom" if="{{showFrom}}">{{pageFrom}}</text>
       </div>
     </div>
 
@@ -183,8 +179,11 @@
     background-color: #555555;
   }
 
+  /* 卡片自己负责居中（同首页） */
   .s-card {
     flex-direction: column;
+    justify-content: center;
+    align-items: center;
     flex: 1;
     width: 100%;
     padding: 10px;
@@ -192,49 +191,31 @@
     border-radius: 10px;
   }
 
-  .s-text-scroll {
+  /* 正文区：占满卡片剩余高度，两个方向都居中 */
+  .s-text-area {
     flex: 1;
     width: 100%;
-  }
-
-  .s-text-inner {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    width: 100%;
-    min-height: 100%;
   }
 
+  /* font-size 由行内 style 绑定，这里不写死 */
   .s-cardtext {
-    font-size: 24px;
     color: #ffffff;
     text-align: center;
     width: 100%;
   }
 
-  /* 出处行不定高：出处折几行，行就自动撑多高，正文区(flex:1)相应让位 */
-  .s-meta-row {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-    margin-top: 6px;
-  }
-
-  .s-scroll-tip {
-    font-size: 16px;
-    color: #666666;
-  }
-
-  /* v1.4.0 是 lines:2，长出处被省略号截断；放宽到 4 行可完整显示全部出处 */
+  /* 出处：不定高、可折行 */
   .s-cardfrom {
     font-size: 20px;
     color: #999999;
     text-align: right;
-    flex: 1;
+    width: 100%;
     lines: 4;
     text-overflow: ellipsis;
-    margin-left: 8px;
+    margin-top: 6px;
   }
 
   .s-hint {
@@ -251,6 +232,31 @@
   import router from '@system.router';
   import device from '@system.device';
 
+  // 水平方向被吃掉的宽度：页面左右内边距 14*2 + 卡片内边距 10*2
+  const TEXT_INSET = 48;
+  // 竖向固定占用（改上面 CSS 的尺寸时，这几个数要跟着改）
+  const PAGE_PAD_V = 20;      // 页面上下 padding 10*2
+  const TOPBAR_H = 44;        // s-topbar 38 + margin 6
+  const INPUT_H = 52;         // s-inputbox 46 + margin 6
+  const ROW_H = 52;           // s-row 46 + margin 6
+  const NAV_H = 48;           // s-nav 42 + margin 6
+  const CARD_PAD_V = 20;      // s-card padding 10*2
+
+  // 出处行：可能折行，高度按行数动态算
+  const FROM_FONT = 20;
+  const FROM_LINE_H = 26;
+  const FROM_MARGIN = 6;
+  const MAX_FROM_LINES = 4;
+
+  const MAX_FONT = 24;
+  const MIN_FONT = 13;
+  const LINE_RATIO = 1.6;
+  const NARROW = 0.55;
+
+  const MIN_AREA_H = 50;
+  const FALLBACK_SCREEN_H = 480;
+  const FALLBACK_SCREEN_W = 336;
+
   export default {
     data: {
       searchText: '',
@@ -266,14 +272,15 @@
       pageText: '',
       pageFrom: '',
       showFrom: false,
-      showScrollTip: false,
       // 显隐开关，集中计算，避免模板里写复杂表达式
       showResult: false,
       showPlaceholder: true,
       keyboardHidden: true,
       // 键盘布局：rect / pill-shaped / circle
       screenType: 'rect',
-      screenWidth: 0
+      screenWidth: 0,
+      screenHeight: 0,
+      textFontSize: MAX_FONT
     },
 
     onInit() {
@@ -283,12 +290,15 @@
       let shape = '';
       try {
         const app = this.$app;
-        shape = app && app.$def && app.$def.screenShape || '';
-        this.screenWidth = app && app.$def && app.$def.screenWidth || 0;
+        shape = (app && app.$def && app.$def.screenShape) || '';
+        this.screenWidth = (app && app.$def && app.$def.screenWidth) || 0;
+        this.screenHeight = (app && app.$def && app.$def.screenHeight) || 0;
       } catch (e) {
         shape = '';
       }
       this.applyShape(shape);
+      this.applyFont();
+      // 兜底：自己再问一次设备（异步），修正应用级探测的竞态
       this.detectShape();
       this.refresh();
     },
@@ -309,8 +319,11 @@
             }
             if (info.screenWidth) {
               this.screenWidth = info.screenWidth;
-              this.showScrollTip = this.needsScroll(this.pageText);
             }
+            if (info.screenHeight) {
+              this.screenHeight = info.screenHeight;
+            }
+            this.applyFont();
           },
           fail: () => {}
         });
@@ -328,34 +341,66 @@
       }
     },
 
-    /** 粗估正文是否超出一屏（24px 字号、8 行）。 */
-    needsScroll(text) {
-      if (!text) {
-        return false;
+    /** 出处折行后占的高度（同首页）。 */
+    fromHeight() {
+      const s = this.pageFrom || '';
+      if (!s) {
+        return 0;
       }
-      const perLine = Math.max(1, Math.floor(((this.screenWidth || 336) - 48) / 24));
-      return text.length > 8 * perLine;
+      let units = 0;
+      for (let i = 0; i < s.length; i++) {
+        units += s.charCodeAt(i) >= 0x2e80 ? 1 : NARROW;
+      }
+      const w = (this.screenWidth || FALLBACK_SCREEN_W) - TEXT_INSET;
+      if (w <= 0) {
+        return FROM_LINE_H + FROM_MARGIN;
+      }
+      let lines = Math.ceil(units * FROM_FONT / w);
+      if (lines < 1) {
+        lines = 1;
+      }
+      if (lines > MAX_FROM_LINES) {
+        lines = MAX_FROM_LINES;
+      }
+      return lines * FROM_LINE_H + FROM_MARGIN;
     },
 
-    /** 换内容后把滚动位置归零。 */
-    resetScroll() {
-      const self = this;
-      const toTop = () => {
-        try {
-          const el = self.$element('resultScroll');
-          if (el && el.scrollTo) {
-            el.scrollTo({ top: 0, behavior: 'instant' });
-          }
-        } catch (e) {
-          // 元素还没渲染好，忽略
-        }
-      };
-      toTop();
-      try {
-        setTimeout(toTop, 0);
-      } catch (e) {
-        // 忽略
+    /** 结果正文可用区高度（只用于算字号）。 */
+    areaHeight() {
+      const sh = this.screenHeight || FALLBACK_SCREEN_H;
+      const resultH = sh - PAGE_PAD_V - TOPBAR_H - INPUT_H - ROW_H;
+      const cardH = resultH - NAV_H;
+      const meta = this.showFrom ? this.fromHeight() : 0;
+      const h = cardH - CARD_PAD_V - meta;
+      return h > MIN_AREA_H ? h : MIN_AREA_H;
+    },
+
+    /** 按「整句要在一屏内放完整」反解字号，推导见 index.ux。 */
+    fitFont(text) {
+      if (!text) {
+        return MAX_FONT;
       }
+      let units = 0;
+      for (let i = 0; i < text.length; i++) {
+        units += text.charCodeAt(i) >= 0x2e80 ? 1 : NARROW;
+      }
+      const w = (this.screenWidth || FALLBACK_SCREEN_W) - TEXT_INSET;
+      const h = this.areaHeight();
+      if (units <= 0 || w <= 0 || h <= 0) {
+        return MAX_FONT;
+      }
+      let f = Math.floor(Math.sqrt(h * w / (LINE_RATIO * units)));
+      if (f > MAX_FONT) {
+        f = MAX_FONT;
+      }
+      if (f < MIN_FONT) {
+        f = MIN_FONT;
+      }
+      return f;
+    },
+
+    applyFont() {
+      this.textFontSize = this.fitFont(this.pageText);
     },
 
     /** 统一刷新显隐状态。 */
@@ -367,7 +412,7 @@
     },
 
     onInputComplete(e) {
-      const content = e && e.detail && e.detail.content || '';
+      const content = (e && e.detail && e.detail.content) || '';
       this.searchText = (this.searchText || '') + content;
       this.refresh();
     },
@@ -434,9 +479,8 @@
       this.pageText = it.t;
       this.pageFrom = it.f ? '—— ' + it.f : '';
       this.showFrom = !!it.f;
-      this.showScrollTip = this.needsScroll(it.t);
+      this.applyFont();
       this.refresh();
-      this.resetScroll();
     },
 
     prevPage() {
@@ -460,7 +504,6 @@
       this.pageText = '';
       this.pageFrom = '';
       this.showFrom = false;
-      this.showScrollTip = false;
       this.extraText = '输入出处关键词搜索';
       this.keyboardHidden = true;
       this.refresh();

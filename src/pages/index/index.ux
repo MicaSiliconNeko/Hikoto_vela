@@ -8,17 +8,17 @@
       </div>
     </div>
 
-    <!-- 句子卡片：竖向 scroll（v1.4.0 结构原样保留） -->
+    <!--
+      正文卡片：不使用 <scroll>。
+      真机实测：竖向 scroll 不生效，且 scroll 内部拿不到 width:100%，
+      导致文字整块贴到一边。这里改成普通 flex 容器（与长期正常的 1.0.1 一致），
+      由 content-box / text-area 自己居中；长句靠自动缩字号保证完整显示。
+    -->
     <div class="content-box">
-      <scroll id="sentenceScroll" class="text-scroll" scroll-y="{{true}}" bounces="{{true}}">
-        <div class="text-inner">
-          <text class="hitokoto-text">{{currentText}}</text>
-        </div>
-      </scroll>
-      <div class="meta-row">
-        <text class="scroll-tip" if="{{showScrollTip}}">可上下滑动</text>
-        <text class="from-text" if="{{showFrom}}">{{currentFrom}}</text>
+      <div class="text-area">
+        <text class="hitokoto-text" style="font-size: {{textFontSize}}px">{{currentText}}</text>
       </div>
+      <text class="from-text" if="{{showFrom}}">{{currentFrom}}</text>
     </div>
 
     <!-- 操作 -->
@@ -78,8 +78,11 @@
     text-align: center;
   }
 
+  /* 卡片自己负责居中（1.0.1 的做法，真机验证过） */
   .content-box {
     flex-direction: column;
+    justify-content: center;
+    align-items: center;
     flex: 1;
     width: 100%;
     padding: 14px;
@@ -88,49 +91,31 @@
     border-radius: 12px;
   }
 
-  .text-scroll {
+  /* 正文区：占满卡片剩余高度，两个方向都居中 */
+  .text-area {
     flex: 1;
     width: 100%;
-  }
-
-  .text-inner {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    width: 100%;
-    min-height: 100%;
   }
 
+  /* font-size 由行内 style 绑定（按字数反解），这里不写死 */
   .hitokoto-text {
-    font-size: 26px;
     color: #ffffff;
     text-align: center;
     width: 100%;
   }
 
-  /* 出处行不定高：出处折几行，行就自动撑多高，正文区(flex:1)相应让位 */
-  .meta-row {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-    margin-top: 8px;
-  }
-
-  .scroll-tip {
-    font-size: 16px;
-    color: #666666;
-  }
-
-  /* v1.4.0 是 lines:2，长出处被省略号截断；放宽到 4 行可完整显示全部出处 */
+  /* 出处：不定高、可折行，行多高就占多高（上面 text-area 会相应让位） */
   .from-text {
     font-size: 20px;
     color: #999999;
     text-align: right;
-    flex: 1;
+    width: 100%;
     lines: 4;
     text-overflow: ellipsis;
-    margin-left: 8px;
+    margin-top: 8px;
   }
 
   .button-row {
@@ -175,47 +160,89 @@
   import router from '@system.router';
   import device from '@system.device';
 
+  // 水平方向被吃掉的宽度：页面左右内边距 18*2 + 卡片内边距 14*2
+  const TEXT_INSET = 64;
+  // 竖向固定占用（改上面 CSS 的尺寸时，这几个数要跟着改）
+  const PAGE_PAD_V = 28;      // 页面上下 padding 14*2
+  const TOPBAR_H = 52;        // topbar 44 + margin 8
+  const BUTTON_H = 56;        // button-row
+  const BOX_MB = 12;          // content-box margin-bottom
+  const BOX_PAD_V = 28;       // content-box padding 14*2
+  const HINT_H = 32;          // hint 行高 + margin（仅 showHint 时占位）
+
+  // 出处行：可能折行，高度按行数动态算
+  const FROM_FONT = 20;
+  const FROM_LINE_H = 26;
+  const FROM_MARGIN = 8;
+  const MAX_FROM_LINES = 4;
+
+  const MAX_FONT = 26;        // 正文最大字号
+  const MIN_FONT = 13;        // 再小就没法看了
+  const LINE_RATIO = 1.6;     // 行高 / 字号（往大里估，宁可多缩，别放不下）
+  const NARROW = 0.55;        // 半角字符按 0.55 个汉字宽
+
+  const MIN_AREA_H = 60;
+  const FALLBACK_SCREEN_H = 480;
+  const FALLBACK_SCREEN_W = 336;
+
   export default {
     data: {
       currentText: '加载中…',
       currentFrom: '',
       showFrom: false,
-      showScrollTip: false,
       hint: '',
       showHint: false,
-      screenWidth: 0
+      screenWidth: 0,
+      screenHeight: 0,
+      textFontSize: MAX_FONT
     },
 
     onInit() {
       console.info('一言：主页 onInit');
-      this.syncScreenWidth();
+      this.syncScreen();
       this.loadRandom();
     },
 
     onShow() {
-      this.syncScreenWidth();
+      this.syncScreen();
     },
 
-    /** 读屏宽（用于估算"可上下滑动"提示），拿不到就用兜底值。 */
-    syncScreenWidth() {
+    /** 读屏幕尺寸。字号要按可用面积算，所以宽高都得拿到。 */
+    syncScreen() {
       let w = 0;
+      let h = 0;
       try {
         const app = this.$app;
-        w = app && app.$def && app.$def.screenWidth || 0;
+        w = (app && app.$def && app.$def.screenWidth) || 0;
+        h = (app && app.$def && app.$def.screenHeight) || 0;
       } catch (e) {
         w = 0;
+        h = 0;
       }
       if (w) {
         this.screenWidth = w;
+      }
+      if (h) {
+        this.screenHeight = h;
+      }
+      this.applyFont();
+
+      if (w && h) {
         return;
       }
       try {
         device.getInfo({
           success: (info) => {
-            if (info && info.screenWidth) {
-              this.screenWidth = info.screenWidth;
-              this.showScrollTip = this.needsScroll(this.currentText);
+            if (!info) {
+              return;
             }
+            if (info.screenWidth) {
+              this.screenWidth = info.screenWidth;
+            }
+            if (info.screenHeight) {
+              this.screenHeight = info.screenHeight;
+            }
+            this.applyFont();
           },
           fail: () => {}
         });
@@ -224,34 +251,73 @@
       }
     },
 
-    /** 粗估正文是否超出一屏（26px 字号、8 行）。 */
-    needsScroll(text) {
-      if (!text) {
-        return false;
+    /** 出处折行后占的高度。出处最长约 30 字宽，最多按 4 行估。 */
+    fromHeight() {
+      const s = this.currentFrom || '';
+      if (!s) {
+        return 0;
       }
-      const perLine = Math.max(1, Math.floor(((this.screenWidth || 336) - 64) / 26));
-      return text.length > 8 * perLine;
+      let units = 0;
+      for (let i = 0; i < s.length; i++) {
+        units += s.charCodeAt(i) >= 0x2e80 ? 1 : NARROW;
+      }
+      const w = (this.screenWidth || FALLBACK_SCREEN_W) - TEXT_INSET;
+      if (w <= 0) {
+        return FROM_LINE_H + FROM_MARGIN;
+      }
+      let lines = Math.ceil(units * FROM_FONT / w);
+      if (lines < 1) {
+        lines = 1;
+      }
+      if (lines > MAX_FROM_LINES) {
+        lines = MAX_FROM_LINES;
+      }
+      return lines * FROM_LINE_H + FROM_MARGIN;
     },
 
-    /** 换内容后把滚动位置归零。 */
-    resetScroll() {
-      const self = this;
-      const toTop = () => {
-        try {
-          const el = self.$element('sentenceScroll');
-          if (el && el.scrollTo) {
-            el.scrollTo({ top: 0, behavior: 'instant' });
-          }
-        } catch (e) {
-          // 元素还没渲染好，忽略
-        }
-      };
-      toTop();
-      try {
-        setTimeout(toTop, 0);
-      } catch (e) {
-        // 忽略
+    /** 正文可用区高度（只用于算字号，不绑到样式上）。 */
+    areaHeight() {
+      const sh = this.screenHeight || FALLBACK_SCREEN_H;
+      const hint = this.showHint ? HINT_H : 0;
+      const meta = this.showFrom ? this.fromHeight() : 0;
+      const boxH = sh - PAGE_PAD_V - TOPBAR_H - BUTTON_H - BOX_MB - hint;
+      const h = boxH - BOX_PAD_V - meta;
+      return h > MIN_AREA_H ? h : MIN_AREA_H;
+    },
+
+    /**
+     * 按「这段文字要在一屏内放完整」反解字号。
+     *
+     * 有效字宽 units = Σ(汉字 1.0 / 半角 0.55)
+     * 字号 f 时：每行放 W/f 个 units，需要 units*f/W 行，
+     * 总高 ≈ (units*f/W) * f * LINE_RATIO ≤ H
+     *   → f ≤ sqrt(H*W / (LINE_RATIO * units))
+     */
+    fitFont(text) {
+      if (!text) {
+        return MAX_FONT;
       }
+      let units = 0;
+      for (let i = 0; i < text.length; i++) {
+        units += text.charCodeAt(i) >= 0x2e80 ? 1 : NARROW;
+      }
+      const w = (this.screenWidth || FALLBACK_SCREEN_W) - TEXT_INSET;
+      const h = this.areaHeight();
+      if (units <= 0 || w <= 0 || h <= 0) {
+        return MAX_FONT;
+      }
+      let f = Math.floor(Math.sqrt(h * w / (LINE_RATIO * units)));
+      if (f > MAX_FONT) {
+        f = MAX_FONT;
+      }
+      if (f < MIN_FONT) {
+        f = MIN_FONT;
+      }
+      return f;
+    },
+
+    applyFont() {
+      this.textFontSize = this.fitFont(this.currentText);
     },
 
     /** 取一条随机句子并刷新界面。全程 try/catch，避免异常导致白屏。 */
@@ -264,26 +330,26 @@
           this.currentText = item.t;
           this.currentFrom = item.f ? '—— ' + item.f : '';
           this.showFrom = !!item.f;
-          this.showScrollTip = this.needsScroll(item.t);
           this.hint = '';
           this.showHint = false;
+          this.applyFont();
+          console.info('一言：正文 ' + item.t.length + ' 字，字号 ' + this.textFontSize);
         } else {
           this.currentText = '暂无数据';
           this.showFrom = false;
-          this.showScrollTip = false;
           this.hint = '句子数据读取为空';
           this.showHint = true;
+          this.applyFont();
         }
       } catch (e) {
         const msg = (e && e.message) ? e.message : String(e);
         console.error('一言：加载句子失败 ' + msg);
         this.currentText = '加载失败';
         this.showFrom = false;
-        this.showScrollTip = false;
         this.hint = '错误：' + msg;
         this.showHint = true;
+        this.applyFont();
       }
-      this.resetScroll();
     },
 
     refreshSentence() {
