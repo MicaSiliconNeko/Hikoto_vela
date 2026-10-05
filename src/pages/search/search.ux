@@ -29,7 +29,7 @@
     </div>
 
     <!-- 结果（键盘弹出时自动隐藏，避免被遮挡）
-         与首页同理：不用 scroll，卡片自己居中；长句靠自动缩字号完整显示 -->
+         与首页同理：不用 scroll、不用动态字号绑定 -->
     <div class="s-result" if="{{showResult}}">
       <div class="s-nav">
         <div class="s-btn s-navbtn" onclick="prevPage">
@@ -41,7 +41,7 @@
       </div>
       <div class="s-card">
         <div class="s-text-area">
-          <text class="s-cardtext" style="font-size: {{textFontSize}}px">{{pageText}}</text>
+          <text class="s-cardtext">{{pageText}}</text>
         </div>
         <text class="s-cardfrom" if="{{showFrom}}">{{pageFrom}}</text>
       </div>
@@ -200,11 +200,14 @@
     align-items: center;
   }
 
-  /* font-size 由行内 style 绑定，这里不写死 */
+  /* 字号写死（不动态绑定） */
   .s-cardtext {
+    font-size: 24px;
     color: #ffffff;
     text-align: center;
     width: 100%;
+    lines: 12;
+    text-overflow: ellipsis;
   }
 
   /* 出处：不定高、可折行 */
@@ -232,31 +235,6 @@
   import router from '@system.router';
   import device from '@system.device';
 
-  // 水平方向被吃掉的宽度：页面左右内边距 14*2 + 卡片内边距 10*2
-  const TEXT_INSET = 48;
-  // 竖向固定占用（改上面 CSS 的尺寸时，这几个数要跟着改）
-  const PAGE_PAD_V = 20;      // 页面上下 padding 10*2
-  const TOPBAR_H = 44;        // s-topbar 38 + margin 6
-  const INPUT_H = 52;         // s-inputbox 46 + margin 6
-  const ROW_H = 52;           // s-row 46 + margin 6
-  const NAV_H = 48;           // s-nav 42 + margin 6
-  const CARD_PAD_V = 20;      // s-card padding 10*2
-
-  // 出处行：可能折行，高度按行数动态算
-  const FROM_FONT = 20;
-  const FROM_LINE_H = 26;
-  const FROM_MARGIN = 6;
-  const MAX_FROM_LINES = 4;
-
-  const MAX_FONT = 24;
-  const MIN_FONT = 13;
-  const LINE_RATIO = 1.6;
-  const NARROW = 0.55;
-
-  const MIN_AREA_H = 50;
-  const FALLBACK_SCREEN_H = 480;
-  const FALLBACK_SCREEN_W = 336;
-
   export default {
     data: {
       searchText: '',
@@ -277,10 +255,7 @@
       showPlaceholder: true,
       keyboardHidden: true,
       // 键盘布局：rect / pill-shaped / circle
-      screenType: 'rect',
-      screenWidth: 0,
-      screenHeight: 0,
-      textFontSize: MAX_FONT
+      screenType: 'rect'
     },
 
     onInit() {
@@ -291,13 +266,10 @@
       try {
         const app = this.$app;
         shape = (app && app.$def && app.$def.screenShape) || '';
-        this.screenWidth = (app && app.$def && app.$def.screenWidth) || 0;
-        this.screenHeight = (app && app.$def && app.$def.screenHeight) || 0;
       } catch (e) {
         shape = '';
       }
       this.applyShape(shape);
-      this.applyFont();
       // 兜底：自己再问一次设备（异步），修正应用级探测的竞态
       this.detectShape();
       this.refresh();
@@ -311,19 +283,9 @@
       try {
         device.getInfo({
           success: (info) => {
-            if (!info) {
-              return;
-            }
-            if (info.screenShape) {
+            if (info && info.screenShape) {
               this.applyShape(info.screenShape);
             }
-            if (info.screenWidth) {
-              this.screenWidth = info.screenWidth;
-            }
-            if (info.screenHeight) {
-              this.screenHeight = info.screenHeight;
-            }
-            this.applyFont();
           },
           fail: () => {}
         });
@@ -339,68 +301,6 @@
           console.info('一言：搜索页 screentype=' + shape);
         }
       }
-    },
-
-    /** 出处折行后占的高度（同首页）。 */
-    fromHeight() {
-      const s = this.pageFrom || '';
-      if (!s) {
-        return 0;
-      }
-      let units = 0;
-      for (let i = 0; i < s.length; i++) {
-        units += s.charCodeAt(i) >= 0x2e80 ? 1 : NARROW;
-      }
-      const w = (this.screenWidth || FALLBACK_SCREEN_W) - TEXT_INSET;
-      if (w <= 0) {
-        return FROM_LINE_H + FROM_MARGIN;
-      }
-      let lines = Math.ceil(units * FROM_FONT / w);
-      if (lines < 1) {
-        lines = 1;
-      }
-      if (lines > MAX_FROM_LINES) {
-        lines = MAX_FROM_LINES;
-      }
-      return lines * FROM_LINE_H + FROM_MARGIN;
-    },
-
-    /** 结果正文可用区高度（只用于算字号）。 */
-    areaHeight() {
-      const sh = this.screenHeight || FALLBACK_SCREEN_H;
-      const resultH = sh - PAGE_PAD_V - TOPBAR_H - INPUT_H - ROW_H;
-      const cardH = resultH - NAV_H;
-      const meta = this.showFrom ? this.fromHeight() : 0;
-      const h = cardH - CARD_PAD_V - meta;
-      return h > MIN_AREA_H ? h : MIN_AREA_H;
-    },
-
-    /** 按「整句要在一屏内放完整」反解字号，推导见 index.ux。 */
-    fitFont(text) {
-      if (!text) {
-        return MAX_FONT;
-      }
-      let units = 0;
-      for (let i = 0; i < text.length; i++) {
-        units += text.charCodeAt(i) >= 0x2e80 ? 1 : NARROW;
-      }
-      const w = (this.screenWidth || FALLBACK_SCREEN_W) - TEXT_INSET;
-      const h = this.areaHeight();
-      if (units <= 0 || w <= 0 || h <= 0) {
-        return MAX_FONT;
-      }
-      let f = Math.floor(Math.sqrt(h * w / (LINE_RATIO * units)));
-      if (f > MAX_FONT) {
-        f = MAX_FONT;
-      }
-      if (f < MIN_FONT) {
-        f = MIN_FONT;
-      }
-      return f;
-    },
-
-    applyFont() {
-      this.textFontSize = this.fitFont(this.pageText);
     },
 
     /** 统一刷新显隐状态。 */
@@ -479,7 +379,6 @@
       this.pageText = it.t;
       this.pageFrom = it.f ? '—— ' + it.f : '';
       this.showFrom = !!it.f;
-      this.applyFont();
       this.refresh();
     },
 
