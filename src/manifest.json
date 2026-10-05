@@ -1,8 +1,8 @@
 {
   "package": "com.hikoto.app",
   "name": "一言",
-  "versionName": "1.4.3",
-  "versionCode": 9,
+  "versionName": "1.4.4",
+  "versionCode": 10,
   "minPlatformVersion": 1000,
   "icon": "/common/images/icon.png",
   "deviceTypeList": [
