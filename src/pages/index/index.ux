@@ -9,13 +9,20 @@
     </div>
 
     <!--
-      正文卡片：不使用 <scroll>（真机上 scroll 内部拿不到 width:100%，文字会贴边），
-      也不使用「动态绑定的 font-size」（实测它是内存杀手，会让 7000 条 OOM）。
-      字号写死在 CSS 里，超长句用 lines + 省略号收尾 —— 与长期正常的 1.0.1 一致。
+      正文卡片：不用 <scroll>（真机上内部拿不到 width:100%，文字会贴边），
+      也不用「动态绑定的 style」（实测内存杀手，7000 条会 OOM）。
+      长句靠「多档静态字号 + if 条件挑选」完整显示：每个档位是一个写死
+      font-size 的 CSS 类，模板里按 textSize 只显示其中一个。
+      这种 if 切换与出处/提示是同一套机制，7000 条下已验证稳定。
     -->
     <div class="content-box">
       <div class="text-area">
-        <text class="hitokoto-text">{{currentText}}</text>
+        <text class="hitokoto-text sz26" if="{{textSize == 26}}">{{currentText}}</text>
+        <text class="hitokoto-text sz23" if="{{textSize == 23}}">{{currentText}}</text>
+        <text class="hitokoto-text sz20" if="{{textSize == 20}}">{{currentText}}</text>
+        <text class="hitokoto-text sz17" if="{{textSize == 17}}">{{currentText}}</text>
+        <text class="hitokoto-text sz14" if="{{textSize == 14}}">{{currentText}}</text>
+        <text class="hitokoto-text sz12" if="{{textSize == 12}}">{{currentText}}</text>
       </div>
       <text class="from-text" if="{{showFrom}}">{{currentFrom}}</text>
     </div>
@@ -99,15 +106,22 @@
     align-items: center;
   }
 
-  /* 字号写死（不动态绑定，避免额外运行时开销） */
+  /* 正文公共样式：颜色/居中/换行上限（字号由下面的档位类给） */
   .hitokoto-text {
-    font-size: 26px;
     color: #ffffff;
     text-align: center;
     width: 100%;
-    lines: 12;
+    lines: 20;
     text-overflow: ellipsis;
   }
+
+  /* 字号档位：只改 font-size，其余继承 .hitokoto-text */
+  .sz26 { font-size: 26px; }
+  .sz23 { font-size: 23px; }
+  .sz20 { font-size: 20px; }
+  .sz17 { font-size: 17px; }
+  .sz14 { font-size: 14px; }
+  .sz12 { font-size: 12px; }
 
   /* 出处：不定高、可折行 */
   .from-text {
@@ -160,6 +174,32 @@
 <script>
   import logic from '../../common/scripts/logic.js';
   import router from '@system.router';
+  import device from '@system.device';
+
+  // 水平方向被吃掉的宽度：页面左右内边距 18*2 + 卡片内边距 14*2
+  const TEXT_INSET = 64;
+  // 竖向固定占用（改上面 CSS 的尺寸时，这几个数要跟着改）
+  const PAGE_PAD_V = 28;      // 页面上下 padding 14*2
+  const TOPBAR_H = 52;        // topbar 44 + margin 8
+  const BUTTON_H = 56;        // button-row
+  const BOX_MB = 12;          // content-box margin-bottom
+  const BOX_PAD_V = 28;       // content-box padding 14*2
+  const HINT_H = 32;          // hint 行高 + margin（仅 showHint 时占位）
+
+  // 出处行（CSS 里 lines:4，20px）
+  const FROM_FONT = 20;
+  const FROM_LINE_H = 26;
+  const FROM_MARGIN = 8;
+  const MAX_FROM_LINES = 4;
+
+  // 字号档位（与模板里的 if 条件、上面的 .szN 类一一对应，改一处要同步改三处）
+  const SIZES = [26, 23, 20, 17, 14, 12];
+  const LINE_RATIO = 1.7;     // 行高/字号，往大里估，宁可多缩一档
+  const NARROW = 0.55;        // 半角字符按 0.55 个汉字宽
+
+  const MIN_AREA_H = 60;
+  const FALLBACK_SCREEN_H = 480;
+  const FALLBACK_SCREEN_W = 336;
 
   export default {
     data: {
@@ -167,12 +207,132 @@
       currentFrom: '',
       showFrom: false,
       hint: '',
-      showHint: false
+      showHint: false,
+      screenWidth: 0,
+      screenHeight: 0,
+      textSize: 26
     },
 
     onInit() {
       console.info('一言：主页 onInit');
+      this.syncScreen();
       this.loadRandom();
+    },
+
+    onShow() {
+      this.syncScreen();
+    },
+
+    /** 读屏幕尺寸：缩字号要按可用面积算，宽高都得拿到。 */
+    syncScreen() {
+      let w = 0;
+      let h = 0;
+      try {
+        const app = this.$app;
+        w = (app && app.$def && app.$def.screenWidth) || 0;
+        h = (app && app.$def && app.$def.screenHeight) || 0;
+      } catch (e) {
+        w = 0;
+        h = 0;
+      }
+      if (w) {
+        this.screenWidth = w;
+      }
+      if (h) {
+        this.screenHeight = h;
+      }
+      this.applySize();
+
+      if (w && h) {
+        return;
+      }
+      try {
+        device.getInfo({
+          success: (info) => {
+            if (!info) {
+              return;
+            }
+            if (info.screenWidth) {
+              this.screenWidth = info.screenWidth;
+            }
+            if (info.screenHeight) {
+              this.screenHeight = info.screenHeight;
+            }
+            this.applySize();
+          },
+          fail: () => {}
+        });
+      } catch (e) {
+        console.error('一言：主页获取屏幕信息异常 ' + e);
+      }
+    },
+
+    /** 字数换算成「汉字宽度」单位数（半角按 0.55 计） */
+    unitsOf(s) {
+      let n = 0;
+      for (let i = 0; i < s.length; i++) {
+        n += s.charCodeAt(i) >= 0x2e80 ? 1 : NARROW;
+      }
+      return n;
+    },
+
+    /** 出处折行后占的高度 */
+    fromHeight() {
+      const s = this.currentFrom || '';
+      if (!s) {
+        return 0;
+      }
+      const w = (this.screenWidth || FALLBACK_SCREEN_W) - TEXT_INSET;
+      if (w <= 0) {
+        return FROM_LINE_H + FROM_MARGIN;
+      }
+      let lines = Math.ceil(this.unitsOf(s) * FROM_FONT / w);
+      if (lines < 1) {
+        lines = 1;
+      }
+      if (lines > MAX_FROM_LINES) {
+        lines = MAX_FROM_LINES;
+      }
+      return lines * FROM_LINE_H + FROM_MARGIN;
+    },
+
+    /** 正文可用高度（只用来挑字号，不绑到样式上） */
+    areaHeight() {
+      const sh = this.screenHeight || FALLBACK_SCREEN_H;
+      const hint = this.showHint ? HINT_H : 0;
+      const srcH = this.showFrom ? this.fromHeight() : 0;
+      const boxH = sh - PAGE_PAD_V - TOPBAR_H - BUTTON_H - BOX_MB - hint;
+      const h = boxH - BOX_PAD_V - srcH;
+      return h > MIN_AREA_H ? h : MIN_AREA_H;
+    },
+
+    /**
+     * 从档位里挑一个「整句能完整放下」的最大字号。
+     * 字号 f 时每行放 W/f 个汉字单位，需要 ceil(units*f/W) 行，
+     * 总高 ≈ 行数 * f * LINE_RATIO ≤ H。
+     */
+    pickSize(text) {
+      if (!text) {
+        return SIZES[0];
+      }
+      const units = this.unitsOf(text);
+      const w = (this.screenWidth || FALLBACK_SCREEN_W) - TEXT_INSET;
+      const h = this.areaHeight();
+      if (units <= 0 || w <= 0 || h <= 0) {
+        return SIZES[0];
+      }
+      for (let i = 0; i < SIZES.length; i++) {
+        const f = SIZES[i];
+        const lines = Math.ceil(units * f / w);
+        if (lines * f * LINE_RATIO <= h) {
+          return f;
+        }
+      }
+      return SIZES[SIZES.length - 1];
+    },
+
+    applySize() {
+      this.textSize = this.pickSize(this.currentText);
     },
 
     /** 取一条随机句子并刷新界面。全程 try/catch，避免异常导致白屏。 */
@@ -187,11 +347,14 @@
           this.showFrom = !!item.f;
           this.hint = '';
           this.showHint = false;
+          this.applySize();
+          console.info('一言：正文 ' + item.t.length + ' 字，字号 ' + this.textSize);
         } else {
           this.currentText = '暂无数据';
           this.showFrom = false;
           this.hint = '句子数据读取为空';
           this.showHint = true;
+          this.applySize();
         }
       } catch (e) {
         const msg = (e && e.message) ? e.message : String(e);
@@ -200,6 +363,7 @@
         this.showFrom = false;
         this.hint = '错误：' + msg;
         this.showHint = true;
+        this.applySize();
       }
     },
 

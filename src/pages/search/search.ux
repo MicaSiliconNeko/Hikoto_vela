@@ -29,7 +29,7 @@
     </div>
 
     <!-- 结果（键盘弹出时自动隐藏，避免被遮挡）
-         与首页同理：不用 scroll、不用动态字号绑定 -->
+         与首页同理：不用 scroll、不用动态 style，长句靠多档静态字号 + if 挑选 -->
     <div class="s-result" if="{{showResult}}">
       <div class="s-nav">
         <div class="s-btn s-navbtn" onclick="prevPage">
@@ -41,7 +41,12 @@
       </div>
       <div class="s-card">
         <div class="s-text-area">
-          <text class="s-cardtext">{{pageText}}</text>
+          <text class="s-cardtext s-sz24" if="{{textSize == 24}}">{{pageText}}</text>
+          <text class="s-cardtext s-sz21" if="{{textSize == 21}}">{{pageText}}</text>
+          <text class="s-cardtext s-sz18" if="{{textSize == 18}}">{{pageText}}</text>
+          <text class="s-cardtext s-sz15" if="{{textSize == 15}}">{{pageText}}</text>
+          <text class="s-cardtext s-sz13" if="{{textSize == 13}}">{{pageText}}</text>
+          <text class="s-cardtext s-sz12" if="{{textSize == 12}}">{{pageText}}</text>
         </div>
         <text class="s-cardfrom" if="{{showFrom}}">{{pageFrom}}</text>
       </div>
@@ -200,15 +205,21 @@
     align-items: center;
   }
 
-  /* 字号写死（不动态绑定） */
+  /* 正文公共样式（字号由下面的档位类给）。类名加 s- 前缀，避开键盘组件的类名 */
   .s-cardtext {
-    font-size: 24px;
     color: #ffffff;
     text-align: center;
     width: 100%;
-    lines: 12;
+    lines: 20;
     text-overflow: ellipsis;
   }
+
+  .s-sz24 { font-size: 24px; }
+  .s-sz21 { font-size: 21px; }
+  .s-sz18 { font-size: 18px; }
+  .s-sz15 { font-size: 15px; }
+  .s-sz13 { font-size: 13px; }
+  .s-sz12 { font-size: 12px; }
 
   /* 出处：不定高、可折行 */
   .s-cardfrom {
@@ -235,6 +246,31 @@
   import router from '@system.router';
   import device from '@system.device';
 
+  // 水平方向被吃掉的宽度：页面左右内边距 14*2 + 卡片内边距 10*2
+  const TEXT_INSET = 48;
+  // 竖向固定占用（改上面 CSS 的尺寸时，这几个数要跟着改）
+  const PAGE_PAD_V = 20;      // 页面上下 padding 10*2
+  const TOPBAR_H = 44;        // s-topbar 38 + margin 6
+  const INPUT_H = 52;         // s-inputbox 46 + margin 6
+  const ROW_H = 52;           // s-row 46 + margin 6
+  const NAV_H = 48;           // s-nav 42 + margin 6
+  const CARD_PAD_V = 20;      // s-card padding 10*2
+
+  // 出处行（CSS 里 lines:4，20px）
+  const FROM_FONT = 20;
+  const FROM_LINE_H = 26;
+  const FROM_MARGIN = 6;
+  const MAX_FROM_LINES = 4;
+
+  // 字号档位（与模板 if 条件、上面 .s-szN 类一一对应）
+  const SIZES = [24, 21, 18, 15, 13, 12];
+  const LINE_RATIO = 1.7;
+  const NARROW = 0.55;
+
+  const MIN_AREA_H = 50;
+  const FALLBACK_SCREEN_H = 480;
+  const FALLBACK_SCREEN_W = 336;
+
   export default {
     data: {
       searchText: '',
@@ -255,7 +291,10 @@
       showPlaceholder: true,
       keyboardHidden: true,
       // 键盘布局：rect / pill-shaped / circle
-      screenType: 'rect'
+      screenType: 'rect',
+      screenWidth: 0,
+      screenHeight: 0,
+      textSize: 24
     },
 
     onInit() {
@@ -266,6 +305,8 @@
       try {
         const app = this.$app;
         shape = (app && app.$def && app.$def.screenShape) || '';
+        this.screenWidth = (app && app.$def && app.$def.screenWidth) || 0;
+        this.screenHeight = (app && app.$def && app.$def.screenHeight) || 0;
       } catch (e) {
         shape = '';
       }
@@ -283,9 +324,19 @@
       try {
         device.getInfo({
           success: (info) => {
-            if (info && info.screenShape) {
+            if (!info) {
+              return;
+            }
+            if (info.screenShape) {
               this.applyShape(info.screenShape);
             }
+            if (info.screenWidth) {
+              this.screenWidth = info.screenWidth;
+            }
+            if (info.screenHeight) {
+              this.screenHeight = info.screenHeight;
+            }
+            this.applySize();
           },
           fail: () => {}
         });
@@ -301,6 +352,69 @@
           console.info('一言：搜索页 screentype=' + shape);
         }
       }
+    },
+
+    /** 字数换算成「汉字宽度」单位数（半角按 0.55 计） */
+    unitsOf(s) {
+      let n = 0;
+      for (let i = 0; i < s.length; i++) {
+        n += s.charCodeAt(i) >= 0x2e80 ? 1 : NARROW;
+      }
+      return n;
+    },
+
+    /** 出处折行后占的高度 */
+    fromHeight() {
+      const s = this.pageFrom || '';
+      if (!s) {
+        return 0;
+      }
+      const w = (this.screenWidth || FALLBACK_SCREEN_W) - TEXT_INSET;
+      if (w <= 0) {
+        return FROM_LINE_H + FROM_MARGIN;
+      }
+      let lines = Math.ceil(this.unitsOf(s) * FROM_FONT / w);
+      if (lines < 1) {
+        lines = 1;
+      }
+      if (lines > MAX_FROM_LINES) {
+        lines = MAX_FROM_LINES;
+      }
+      return lines * FROM_LINE_H + FROM_MARGIN;
+    },
+
+    /** 结果正文可用高度（只用来挑字号） */
+    areaHeight() {
+      const sh = this.screenHeight || FALLBACK_SCREEN_H;
+      const cardH = sh - PAGE_PAD_V - TOPBAR_H - INPUT_H - ROW_H - NAV_H;
+      const srcH = this.showFrom ? this.fromHeight() : 0;
+      const h = cardH - CARD_PAD_V - srcH;
+      return h > MIN_AREA_H ? h : MIN_AREA_H;
+    },
+
+    /** 从档位里挑一个「整句能完整放下」的最大字号，推导见 index.ux。 */
+    pickSize(text) {
+      if (!text) {
+        return SIZES[0];
+      }
+      const units = this.unitsOf(text);
+      const w = (this.screenWidth || FALLBACK_SCREEN_W) - TEXT_INSET;
+      const h = this.areaHeight();
+      if (units <= 0 || w <= 0 || h <= 0) {
+        return SIZES[0];
+      }
+      for (let i = 0; i < SIZES.length; i++) {
+        const f = SIZES[i];
+        const lines = Math.ceil(units * f / w);
+        if (lines * f * LINE_RATIO <= h) {
+          return f;
+        }
+      }
+      return SIZES[SIZES.length - 1];
+    },
+
+    applySize() {
+      this.textSize = this.pickSize(this.pageText);
     },
 
     /** 统一刷新显隐状态。 */
@@ -379,6 +493,7 @@
       this.pageText = it.t;
       this.pageFrom = it.f ? '—— ' + it.f : '';
       this.showFrom = !!it.f;
+      this.applySize();
       this.refresh();
     },
 
