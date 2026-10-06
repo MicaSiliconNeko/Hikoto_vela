@@ -88,6 +88,17 @@ node node_modules/aiot-toolkit/lib/bin.js release
 - 极端窄屏（约 192px 宽）下仍有极少数超长句会触发省略号
 - 更新句子需重新生成数据并构建
 
-## License
+## 许可证
 
-[MIT](./LICENSE) · 数据来自 [hitokoto.cn](https://hitokoto.cn)
+本项目以 **[GNU Affero 通用公共许可证 v3.0](./LICENSE)（AGPL-3.0）** 授权。
+Copyright (c) 2026 CatechinCode
+
+**为什么是 AGPL**：本应用把一言官方句子库
+（[sentences-bundle](https://github.com/hitokoto-osc/sentences-bundle)，
+数据来自 [hitokoto.cn](https://hitokoto.cn)）**打包进了应用**。该句子库以 AGPL 授权，
+要求分发衍生作品（包括打包进应用）时同样以 AGPL 开源并提供对应源码；
+句子数据已以源码形式放在本仓库（`src/common/scripts/data.js` 或分片 `data/p*.js`），
+完整代码即本仓库。
+
+- 若仅通过接口（超链接方式）调用一言，不受 AGPL 的传染性影响。
+- 句子著作权并不全部由一言网持有；句子原作者如需移除自己的句子，可联系 `i@loli.online`。
