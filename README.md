@@ -18,14 +18,13 @@
 
 | 文件 | 句子数 | 体积 | 说明 |
 |---|---|---|---|
-| `com.hikoto.app.v1.4.9.rpk` | 7000 | 752 KB | **句子最多**（数据分 8 个文件加载） |
-| `com.hikoto.app.v1.4.8.rpk` | 5000 | 617 KB | 句子少些，内存占用最稳 |
+| `com.hikoto.app.v1.5.0.rpk` | 7000 | 752 KB | 数据分 8 个文件加载，自签正式证书签名 |
 
 安装：使用Astobox安装。
 
 ## 数据规模与出处覆盖
 
-- 稳定版 **5000 条句子，覆盖全部 4382 个出处**——搜索按出处进行，任何出处都能搜到
+- **7000 条句子，覆盖全部 4382 个出处**——搜索按出处进行，任何出处都能搜到
 - 数据结构为三张表：`SRC`（去重出处）/ `SRC_S`（前缀偏移，句子按出处聚簇）/ `TXT`（正文），
   每条句子打包成本从 147B 压到 90B
 - 清洗规则：去重、去零宽字符、去除纯日文 / 颜文字等手环无法渲染的内容、
@@ -54,16 +53,17 @@ sign/                          # release 构建签名证书（工具链默认证
 环境：node ≥ 22，`npm install` 后：
 
 ```bash
-# 稳定版（5000 句，单文件数据）
-node node_modules/aiot-toolkit/lib/bin.js release
-
-# 实验版（7000 句，数据分 8 片）
+# 生成数据（7000 句，分 8 片）后构建正式包
 python tools/gen_data.py 100 7000 200 --split 8
 node node_modules/aiot-toolkit/lib/bin.js release
 ```
 
 - 必须用 `release` 构建（debug 构建不压缩，页面包会超 1MB 上限）
-- `sign/` 里是 Vela 工具链自带的默认证书，正式发布请替换为自己的
+- **正式包需要自己的签名证书**：放在 `sign/release/private.pem` + `sign/release/certificate.pem`
+  （自签即可，例如 `openssl req -x509 -newkey rsa:4096 -sha256 -days 7300 -nodes
+  -keyout sign/release/private.pem -out sign/release/certificate.pem -subj "/C=CN/O=<你>/CN=com.hikoto.app"`）。
+  缺了会退回工具链内置的 `CN=localhost` debug 证书，**AstroBox 会拒收 debug 包**。
+  该目录已在 `.gitignore` 中，私钥不会进仓库。
 - 修改句子数量 / 审核尺度：改 `tools/gen_data.py` 参数与 `tools/moderation.py`，
   句子数下限为 4382（保证出处全覆盖），上限受手环 JS 堆限制（单文件数据约 5000~6000）
 

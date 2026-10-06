@@ -8,3 +8,8 @@ dist/
 .workbuddy/
 .vs/
 !懒得发包了_如果你需要rpk看这/*.rpk
+!downloads/*.rpk
+
+# 正式签名私钥不进仓库（公开仓库放私钥不安全）；
+# 缺失时 release 构建会退回内置的 CN=localhost debug 证书。
+sign/release/
