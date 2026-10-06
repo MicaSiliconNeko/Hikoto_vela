@@ -1,6 +1,6 @@
 {
   "item": {
-    "id": "io.github.micasiliconneko.hikoto",
+    "id": "com.hikoto.app",
     "restype": "quick_app",
     "name": "一言",
     "description": "一个一言快应用，vibe code的，有7K句子",
@@ -20,14 +20,14 @@
   "links": [],
   "downloads": {
     "xmb9p": {
-      "version": "1.6.2",
-      "file_name": "downloads/split-7000-v1.6.2.rpk",
-      "versionCode": 19
+      "version": "1.6.3",
+      "file_name": "downloads/split-7000-v1.6.3.rpk",
+      "versionCode": 20
     },
     "xmb10p": {
-      "version": "1.6.2",
-      "file_name": "downloads/split-7000-v1.6.2.rpk",
-      "versionCode": 19
+      "version": "1.6.3",
+      "file_name": "downloads/split-7000-v1.6.3.rpk",
+      "versionCode": 20
     }
   },
   "ext": {}
