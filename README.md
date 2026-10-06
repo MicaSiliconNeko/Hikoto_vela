@@ -22,7 +22,7 @@
 
 | 文件 | 句子数 | 体积 | 说明 |
 |---|---|---|---|
-| `io.github.micasiliconneko.hikoto.v1.6.2.rpk` | 7000 | 753 KB | 数据分 8 个文件加载，自签正式证书签名 |
+| `com.hikoto.app.v1.6.3.rpk` | 7000 | 753 KB | 数据分 8 个文件加载，自签正式证书签名 |
 
 安装：使用Astobox安装。
 
@@ -66,7 +66,7 @@ node node_modules/aiot-toolkit/lib/bin.js release
 - **正式包需要自己的签名证书**：放在 `sign/release/private.pem` + `sign/release/certificate.pem`
   （自签即可，`CN` 用包名即可，例如 `openssl req -x509 -newkey rsa:4096 -sha256 -days 7300 -nodes
   -keyout sign/release/private.pem -out sign/release/certificate.pem
-  -subj "/C=CN/O=<你>/CN=io.github.micasiliconneko.hikoto"`）。
+  -subj "/C=CN/O=<你>/CN=com.hikoto.app"`）。
   缺了会退回工具链内置的 `CN=localhost` debug 证书，**AstroBox 会拒收 debug 包**。
   该目录已在 `.gitignore` 中，私钥不会进仓库。
 - 修改句子数量 / 审核尺度：改 `tools/gen_data.py` 参数与 `tools/moderation.py`，
