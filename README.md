@@ -2,7 +2,7 @@
 本README由AI完成
 小米手环 / 小米手表（VelaOS 快应用）上的一言阅读器。
 
-> 数据来源：[一言开放句子库]((https://github.com/hitokoto-osc/sentences-bundle))，已清洗、去重、审核后打包进本地数据文件，**离线可用，不依赖网络**。
+> 数据来源：[一言开放句子库](https://github.com/hitokoto-osc/sentences-bundle)（AGPL-3.0），已清洗、去重、审核后打包进本地数据文件，**离线可用，不依赖网络**。
 
 ## 功能
 
