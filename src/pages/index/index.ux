@@ -1,10 +1,13 @@
 <template>
   <div class="page">
-    <!-- 顶部：标题 + 关于入口 -->
+    <!-- 顶栏：左右各一个 72×72 圆钮，标题 32px 居中（= 无源流沙 规范） -->
     <div class="topbar">
+      <div class="icon-btn" onclick="goToAbout">
+        <text class="icon-btn-text">关于</text>
+      </div>
       <text class="title">一言</text>
-      <div class="btn-about" onclick="goToAbout">
-        <text class="btn-about-text">关于</text>
+      <div class="icon-btn" onclick="goToSearch">
+        <text class="icon-btn-text">搜索</text>
       </div>
     </div>
 
@@ -15,10 +18,11 @@
       font-size 的 CSS 类，模板里按 textSize 只显示其中一个。
       这种 if 切换与出处/提示是同一套机制，7000 条下已验证稳定。
     -->
-    <div class="content-box">
+    <div class="card">
       <div class="text-area">
-        <text class="hitokoto-text sz26" if="{{textSize == 26}}">{{currentText}}</text>
-        <text class="hitokoto-text sz23" if="{{textSize == 23}}">{{currentText}}</text>
+        <text class="hitokoto-text sz32" if="{{textSize == 32}}">{{currentText}}</text>
+        <text class="hitokoto-text sz28" if="{{textSize == 28}}">{{currentText}}</text>
+        <text class="hitokoto-text sz24" if="{{textSize == 24}}">{{currentText}}</text>
         <text class="hitokoto-text sz20" if="{{textSize == 20}}">{{currentText}}</text>
         <text class="hitokoto-text sz17" if="{{textSize == 17}}">{{currentText}}</text>
         <text class="hitokoto-text sz14" if="{{textSize == 14}}">{{currentText}}</text>
@@ -27,14 +31,9 @@
       <text class="from-text" if="{{showFrom}}">{{currentFrom}}</text>
     </div>
 
-    <!-- 操作 -->
-    <div class="button-row">
-      <div class="btn btn-primary" onclick="refreshSentence">
-        <text class="btn-text">换一句</text>
-      </div>
-      <div class="btn btn-primary" onclick="goToSearch">
-        <text class="btn-text">搜索</text>
-      </div>
+    <!-- 主操作：#0D6EFF 强调色按钮 -->
+    <div class="primary-btn" onclick="refreshSentence">
+      <text class="primary-text">换一句</text>
     </div>
 
     <text class="hint" if="{{showHint}}">{{hint}}</text>
@@ -42,59 +41,61 @@
 </template>
 
 <style>
+  /* ---- 设计令牌（无源流沙 / 小米手环 9 Pro，画布 336×480）----
+     背景 #000000 · 卡片与圆钮 #262626 · 强调 #0D6EFF
+     文字：标题/正文 32 白 · 次要 28 白 60%（#999999）
+     圆钮 72×72 · 卡片圆角 20 · 页面边距 6 · 屏角半径 48 */
   .page {
     width: 100%;
     height: 100%;
     flex-direction: column;
-    justify-content: center;
     align-items: center;
-    padding: 14px 18px;
+    padding: 6px;
     background-color: #000000;
   }
 
   .topbar {
     flex-direction: row;
-    justify-content: flex-end;
+    justify-content: space-between;
     align-items: center;
     width: 100%;
-    height: 44px;
-    margin-bottom: 8px;
+    height: 72px;
+    margin-bottom: 6px;
   }
 
   .title {
-    font-size: 28px;
-    color: #ffffff;
-    font-weight: bold;
     flex: 1;
+    font-size: 32px;
+    font-weight: bold;
+    color: #ffffff;
     text-align: center;
   }
 
-  .btn-about {
-    width: 64px;
-    height: 36px;
+  .icon-btn {
+    width: 72px;
+    height: 72px;
     justify-content: center;
     align-items: center;
-    border-radius: 8px;
-    background-color: #333333;
+    border-radius: 999px;
+    background-color: #262626;
   }
 
-  .btn-about-text {
-    font-size: 20px;
-    color: #cccccc;
+  .icon-btn-text {
+    font-size: 24px;
+    color: #ffffff;
     text-align: center;
   }
 
-  /* 卡片自己负责居中（1.0.1 的做法，真机验证过） */
-  .content-box {
+  /* 卡片自己负责居中（真机验证过的做法，不要依赖内层 width:100%） */
+  .card {
     flex-direction: column;
     justify-content: center;
     align-items: center;
     flex: 1;
     width: 100%;
-    padding: 14px;
-    margin-bottom: 12px;
-    background-color: #1a1a1a;
-    border-radius: 12px;
+    padding: 16px;
+    background-color: #262626;
+    border-radius: 20px;
   }
 
   /* 正文区：占满卡片剩余高度，两个方向都居中 */
@@ -115,59 +116,51 @@
     text-overflow: ellipsis;
   }
 
-  /* 字号档位：只改 font-size，其余继承 .hitokoto-text */
-  .sz26 { font-size: 26px; }
-  .sz23 { font-size: 23px; }
+  /* 字号档位：只改 font-size，其余继承 .hitokoto-text
+     （与模板 if 条件、JS 里的 SIZES 一一对应，改一处要同步改三处） */
+  .sz32 { font-size: 32px; }
+  .sz28 { font-size: 28px; }
+  .sz24 { font-size: 24px; }
   .sz20 { font-size: 20px; }
   .sz17 { font-size: 17px; }
   .sz14 { font-size: 14px; }
   .sz12 { font-size: 12px; }
 
-  /* 出处：不定高、可折行 */
+  /* 出处：28px 白 60% ≈ #999999 */
   .from-text {
-    font-size: 20px;
+    font-size: 28px;
     color: #999999;
     text-align: right;
     width: 100%;
-    lines: 4;
+    lines: 2;
     text-overflow: ellipsis;
     margin-top: 8px;
   }
 
-  .button-row {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-    height: 56px;
-  }
-
-  .btn {
+  .primary-btn {
     justify-content: center;
     align-items: center;
-    border-radius: 12px;
+    width: 100%;
+    height: 72px;
+    margin-top: 6px;
+    border-radius: 20px;
+    background-color: #0d6eff;
   }
 
-  .btn-primary {
-    width: 48%;
-    height: 56px;
-    background-color: #0066ff;
-  }
-
-  .btn-text {
-    font-size: 26px;
+  .primary-text {
+    font-size: 32px;
     color: #ffffff;
     text-align: center;
   }
 
   .hint {
-    font-size: 18px;
-    color: #888888;
+    font-size: 24px;
+    color: #999999;
     text-align: center;
     width: 100%;
-    lines: 2;
+    lines: 1;
     text-overflow: ellipsis;
-    margin-top: 8px;
+    margin-top: 6px;
   }
 </style>
 
@@ -176,28 +169,27 @@
   import router from '@system.router';
   import device from '@system.device';
 
-  // 水平方向被吃掉的宽度：页面左右内边距 18*2 + 卡片内边距 14*2
-  const TEXT_INSET = 64;
+  // 水平方向被吃掉的宽度：页面左右 padding 6*2 + 卡片 padding 16*2
+  const TEXT_INSET = 44;
   // 竖向固定占用（改上面 CSS 的尺寸时，这几个数要跟着改）
-  const PAGE_PAD_V = 28;      // 页面上下 padding 14*2
-  const TOPBAR_H = 52;        // topbar 44 + margin 8
-  const BUTTON_H = 56;        // button-row
-  const BOX_MB = 12;          // content-box margin-bottom
-  const BOX_PAD_V = 28;       // content-box padding 14*2
-  const HINT_H = 32;          // hint 行高 + margin（仅 showHint 时占位）
+  const PAGE_PAD_V = 12;      // 页面上下 padding 6*2
+  const TOPBAR_H = 78;        // topbar 72 + margin 6
+  const BTN_H = 78;           // primary-btn 72 + margin 6
+  const CARD_PAD_V = 32;      // card padding 16*2
+  const HINT_H = 30;          // hint 行高 + margin（仅 showHint 时占位）
 
-  // 出处行（CSS 里 lines:4，20px）
-  const FROM_FONT = 20;
-  const FROM_LINE_H = 26;
+  // 出处行（CSS 里 lines:2，28px）
+  const FROM_FONT = 28;
+  const FROM_LINE_H = 36;
   const FROM_MARGIN = 8;
-  const MAX_FROM_LINES = 4;
+  const MAX_FROM_LINES = 2;
 
-  // 字号档位（与模板里的 if 条件、上面的 .szN 类一一对应，改一处要同步改三处）
-  const SIZES = [26, 23, 20, 17, 14, 12];
+  // 字号档位（与模板 if 条件、上面的 .szN 类一一对应）
+  const SIZES = [32, 28, 24, 20, 17, 14, 12];
   const LINE_RATIO = 1.7;     // 行高/字号，往大里估，宁可多缩一档
   const NARROW = 0.55;        // 半角字符按 0.55 个汉字宽
 
-  const MIN_AREA_H = 60;
+  const MIN_AREA_H = 40;
   const FALLBACK_SCREEN_H = 480;
   const FALLBACK_SCREEN_W = 336;
 
@@ -210,7 +202,7 @@
       showHint: false,
       screenWidth: 0,
       screenHeight: 0,
-      textSize: 26
+      textSize: 32
     },
 
     onInit() {
@@ -301,8 +293,7 @@
       const sh = this.screenHeight || FALLBACK_SCREEN_H;
       const hint = this.showHint ? HINT_H : 0;
       const srcH = this.showFrom ? this.fromHeight() : 0;
-      const boxH = sh - PAGE_PAD_V - TOPBAR_H - BUTTON_H - BOX_MB - hint;
-      const h = boxH - BOX_PAD_V - srcH;
+      const h = sh - PAGE_PAD_V - TOPBAR_H - BTN_H - hint - CARD_PAD_V - srcH;
       return h > MIN_AREA_H ? h : MIN_AREA_H;
     },
 

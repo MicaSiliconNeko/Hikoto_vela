@@ -11,6 +11,10 @@
 - **长句自适应**：正文按字数自动缩字号，保证任意一句完整显示在一屏内
 - **屏幕形状自适应**：方屏（rect）/ 药丸屏（pill-shaped）/ 圆屏（circle）自动匹配键盘布局
 - **关于页**：显示句子总数与出处总数
+- **界面**：按「无源流沙」小米手环 9 Pro 设计规范实现（画布 336×480、
+  背景 `#000000`、卡片与圆钮 `#262626`、强调色 `#0D6EFF`、圆钮 72×72、圆角 20、页面边距 6；
+  文字 标题 32 / 正文次级 28（白 60% ≈ `#999999`））。改界面前建议先对照规范，
+  设计稿见 `F:\小米手环9Pro.sketch`（或 `.jsd`）。
 
 ## 下载安装（不需要自己编译）
 
@@ -18,7 +22,7 @@
 
 | 文件 | 句子数 | 体积 | 说明 |
 |---|---|---|---|
-| `com.hikoto.app.v1.5.0.rpk` | 7000 | 752 KB | 数据分 8 个文件加载，自签正式证书签名 |
+| `io.github.micasiliconneko.hikoto.v1.6.0.rpk` | 7000 | 753 KB | 数据分 8 个文件加载，自签正式证书签名 |
 
 安装：使用Astobox安装。
 
@@ -60,8 +64,9 @@ node node_modules/aiot-toolkit/lib/bin.js release
 
 - 必须用 `release` 构建（debug 构建不压缩，页面包会超 1MB 上限）
 - **正式包需要自己的签名证书**：放在 `sign/release/private.pem` + `sign/release/certificate.pem`
-  （自签即可，例如 `openssl req -x509 -newkey rsa:4096 -sha256 -days 7300 -nodes
-  -keyout sign/release/private.pem -out sign/release/certificate.pem -subj "/C=CN/O=<你>/CN=com.hikoto.app"`）。
+  （自签即可，`CN` 用包名即可，例如 `openssl req -x509 -newkey rsa:4096 -sha256 -days 7300 -nodes
+  -keyout sign/release/private.pem -out sign/release/certificate.pem
+  -subj "/C=CN/O=<你>/CN=io.github.micasiliconneko.hikoto"`）。
   缺了会退回工具链内置的 `CN=localhost` debug 证书，**AstroBox 会拒收 debug 包**。
   该目录已在 `.gitignore` 中，私钥不会进仓库。
 - 修改句子数量 / 审核尺度：改 `tools/gen_data.py` 参数与 `tools/moderation.py`，
