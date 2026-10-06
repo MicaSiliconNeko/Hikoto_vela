@@ -4,12 +4,15 @@
   <!-- 注意：根节点不要使用 class="page"，
        InputMethod 组件内部的 .page 是 position:absolute，样式会互相污染。 -->
   <div class="s-page">
-    <!-- 顶栏：72 圆钮 + 居中标题（无源流沙规范） -->
+    <!-- 顶栏：72 圆钮 + 居中标题；命中条数跟在标题旁边（无源流沙规范） -->
     <div class="s-topbar">
       <div class="s-icon-btn" onclick="goBack">
         <text class="s-icon-btn-text">返回</text>
       </div>
-      <text class="s-title">搜索</text>
+      <div class="s-titlebox">
+        <text class="s-title">搜索</text>
+        <text class="s-count" if="{{showResult}}">{{pageCurrent}}/{{pageTotal}}</text>
+      </div>
       <div class="s-icon-btn" onclick="clearInput">
         <text class="s-icon-btn-text">清空</text>
       </div>
@@ -41,7 +44,7 @@
       <text class="s-cardfrom" if="{{showFrom}}">{{pageFrom}}</text>
     </div>
 
-    <!-- 翻页 -->
+    <!-- 翻页（矮一档，把高度让给结果卡片） -->
     <div class="s-nav" if="{{showResult}}">
       <div class="s-navbtn" onclick="prevPage">
         <text class="s-navtext">上一句</text>
@@ -51,7 +54,6 @@
       </div>
     </div>
 
-    <text class="s-pageinfo" if="{{showResult}}">{{pageCurrent}} / {{pageTotal}}</text>
     <text class="s-hint" if="{{showHint}}">{{extraText}}</text>
 
     <input-method
@@ -86,12 +88,24 @@
     margin-bottom: 6px;
   }
 
-  .s-title {
+  .s-titlebox {
     flex: 1;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .s-title {
     font-size: 32px;
     font-weight: bold;
     color: #ffffff;
     text-align: center;
+  }
+
+  .s-count {
+    font-size: 24px;
+    color: #999999;
+    margin-left: 8px;
   }
 
   .s-icon-btn {
@@ -209,7 +223,7 @@
     justify-content: space-between;
     align-items: center;
     width: 100%;
-    height: 72px;
+    height: 52px;
     margin-top: 6px;
   }
 
@@ -217,23 +231,15 @@
     justify-content: center;
     align-items: center;
     width: 48%;
-    height: 72px;
-    border-radius: 20px;
+    height: 52px;
+    border-radius: 999px;
     background-color: #262626;
   }
 
   .s-navtext {
-    font-size: 28px;
+    font-size: 24px;
     color: #ffffff;
     text-align: center;
-  }
-
-  .s-pageinfo {
-    font-size: 24px;
-    color: #999999;
-    text-align: center;
-    width: 100%;
-    margin-top: 4px;
   }
 
   .s-hint {
@@ -258,7 +264,7 @@
   const PAGE_PAD_V = 12;      // 页面上下 padding 6*2
   const TOPBAR_H = 78;        // s-topbar 72 + margin 6
   const INPUTROW_H = 78;      // s-inputrow 72 + margin 6
-  const NAV_H = 78;           // s-nav 72 + margin 6
+  const NAV_H = 58;           // s-nav 52 + margin 6
   const CARD_PAD_V = 32;      // s-card padding 16*2
 
   // 出处行（CSS 里 lines:2，28px）

@@ -20,14 +20,14 @@
   "links": [],
   "downloads": {
     "xmb9p": {
-      "version": "1.6.0",
-      "file_name": "downloads/split-7000-v1.6.0.rpk",
-      "versionCode": 17
+      "version": "1.6.1",
+      "file_name": "downloads/split-7000-v1.6.1.rpk",
+      "versionCode": 18
     },
     "xmb10p": {
-      "version": "1.6.0",
-      "file_name": "downloads/split-7000-v1.6.0.rpk",
-      "versionCode": 17
+      "version": "1.6.1",
+      "file_name": "downloads/split-7000-v1.6.1.rpk",
+      "versionCode": 18
     }
   },
   "ext": {}
