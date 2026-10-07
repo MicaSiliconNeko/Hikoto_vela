@@ -41,7 +41,15 @@
         <text class="s-cardtext s-sz14" if="{{textSize == 14}}">{{pageText}}</text>
         <text class="s-cardtext s-sz12" if="{{textSize == 12}}">{{pageText}}</text>
       </div>
-      <text class="s-cardfrom" if="{{showFrom}}">{{pageFrom}}</text>
+      <!-- 出处字号按长度自适应（同首页） -->
+      <div class="s-from-box" if="{{showFrom}}">
+        <text class="s-cardfrom s-sz28" if="{{fromSize == 28}}">{{pageFrom}}</text>
+        <text class="s-cardfrom s-sz24" if="{{fromSize == 24}}">{{pageFrom}}</text>
+        <text class="s-cardfrom s-sz20" if="{{fromSize == 20}}">{{pageFrom}}</text>
+        <text class="s-cardfrom s-sz17" if="{{fromSize == 17}}">{{pageFrom}}</text>
+        <text class="s-cardfrom s-sz14" if="{{fromSize == 14}}">{{pageFrom}}</text>
+        <text class="s-cardfrom s-sz12" if="{{fromSize == 12}}">{{pageFrom}}</text>
+      </div>
     </div>
 
     <!-- 翻页（矮一档，把高度让给结果卡片） -->
@@ -209,16 +217,22 @@
   .s-sz14 { font-size: 14px; }
   .s-sz12 { font-size: 12px; }
 
-  /* 出处：28px 白 60% */
+  /* 出处：白 60%；字号跟着正文档位走（复用 .s-szN），lines:2 只作安全上限 */
+  .s-from-box {
+    width: 100%;
+    flex-direction: column;
+    align-items: flex-end;
+    margin-top: 8px;
+  }
+
   .s-cardfrom {
-    font-size: 28px;
     color: #999999;
     text-align: right;
     width: 100%;
     lines: 2;
     text-overflow: ellipsis;
-    margin-top: 8px;
   }
+
 
   .s-nav {
     flex-direction: row;
@@ -270,11 +284,11 @@
   const NAV_H = 64;           // s-nav 52 + 上下 margin 各 6
   const CARD_PAD_V = 20;      // s-card padding 10*2
 
-  // 出处行（CSS 里 lines:2，28px）
-  const FROM_FONT = 28;
-  const FROM_LINE_H = 36;
+  // 出处字号 = 正文档位「往下退一档」（同首页）
+  const FROM_OF_BODY = [28, 24, 20, 17, 14, 12, 12];
+  const FROM_LINES_MAX = 2;
+  const FROM_LINE_RATIO = 1.5;
   const FROM_MARGIN = 8;
-  const MAX_FROM_LINES = 2;
 
   // 字号档位（与模板 if 条件、上面 .s-szN 类一一对应）
   const SIZES = [32, 28, 24, 20, 17, 14, 12];
@@ -300,6 +314,7 @@
       pageText: '',
       pageFrom: '',
       showFrom: false,
+      fromSize: 28,
       // 显隐开关，集中计算，避免模板里写复杂表达式
       showResult: false,
       showPlaceholder: true,
@@ -377,42 +392,64 @@
       return n;
     },
 
-    /** 出处折行后占的高度 */
-    fromHeight() {
-      const s = this.pageFrom || '';
-      if (!s) {
+    /** 出处要占几行（给出的字号下） */
+    linesAtSize(s, f) {
+      const w = (this.screenWidth || FALLBACK_SCREEN_W) - TEXT_INSET;
+      if (!s || w <= 0 || !f) {
         return 0;
       }
-      const w = (this.screenWidth || FALLBACK_SCREEN_W) - TEXT_INSET;
-      if (w <= 0) {
-        return FROM_LINE_H + FROM_MARGIN;
-      }
-      let lines = Math.ceil(this.unitsOf(s) * FROM_FONT / w);
+      let lines = Math.ceil(this.unitsOf(s) * f / w);
       if (lines < 1) {
         lines = 1;
       }
-      if (lines > MAX_FROM_LINES) {
-        lines = MAX_FROM_LINES;
+      if (lines > FROM_LINES_MAX) {
+        lines = FROM_LINES_MAX;
       }
-      return lines * FROM_LINE_H + FROM_MARGIN;
+      return lines;
     },
 
-    /** 结果正文可用高度（只用来挑字号） */
-    areaHeight() {
+    /** 出处字号：跟着正文档位走（往下退一档），太长再逐步往下让（同首页） */
+    fromSizeFor(bodySize) {
+      const s = this.pageFrom || '';
+      let idx = 0;
+      for (let i = 0; i < SIZES.length; i++) {
+        if (SIZES[i] === bodySize) {
+          idx = i;
+          break;
+        }
+      }
+      for (let i = idx; i < SIZES.length; i++) {
+        if (this.linesAtSize(s, FROM_OF_BODY[i]) <= FROM_LINES_MAX) {
+          return FROM_OF_BODY[i];
+        }
+      }
+      return SIZES[SIZES.length - 1];
+    },
+
+    /** 出处占的高度（按它自己的字号算） */
+    fromHeight() {
+      const lines = this.linesAtSize(this.pageFrom, this.fromSize);
+      if (!lines) {
+        return 0;
+      }
+      return lines * (this.fromSize || SIZES[0]) * FROM_LINE_RATIO + FROM_MARGIN;
+    },
+
+    /** 结果正文可用高度；srcH 由调用方传入以免循环依赖 */
+    areaHeight(srcH) {
       const sh = this.screenHeight || FALLBACK_SCREEN_H;
-      const srcH = this.showFrom ? this.fromHeight() : 0;
-      const h = sh - PAGE_PAD_V - TOPBAR_H - INPUTROW_H - NAV_H - CARD_PAD_V - srcH;
+      const h = sh - PAGE_PAD_V - TOPBAR_H - INPUTROW_H - NAV_H - CARD_PAD_V - (srcH || 0);
       return h > MIN_AREA_H ? h : MIN_AREA_H;
     },
 
     /** 从档位里挑一个「整句能完整放下」的最大字号，推导见 index.ux。 */
-    pickSize(text) {
+    pickSize(text, srcH) {
       if (!text) {
         return SIZES[0];
       }
       const units = this.unitsOf(text);
       const w = (this.screenWidth || FALLBACK_SCREEN_W) - TEXT_INSET;
-      const h = this.areaHeight();
+      const h = this.areaHeight(srcH);
       if (units <= 0 || w <= 0 || h <= 0) {
         return SIZES[0];
       }
@@ -426,8 +463,14 @@
       return SIZES[SIZES.length - 1];
     },
 
+    /** 两遍求解：出处跟着正文档位走，正文高度又依赖出处（同首页） */
     applySize() {
-      this.textSize = this.pickSize(this.pageText);
+      const text = this.pageText;
+      const first = this.pickSize(text, 0);
+      this.fromSize = this.fromSizeFor(first);
+      const second = this.pickSize(text, this.fromHeight());
+      this.fromSize = this.fromSizeFor(second);
+      this.textSize = second;
     },
 
     /** 统一刷新显隐状态。 */

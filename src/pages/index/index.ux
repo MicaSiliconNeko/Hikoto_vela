@@ -28,7 +28,15 @@
         <text class="hitokoto-text sz14" if="{{textSize == 14}}">{{currentText}}</text>
         <text class="hitokoto-text sz12" if="{{textSize == 12}}">{{currentText}}</text>
       </div>
-      <text class="from-text" if="{{showFrom}}">{{currentFrom}}</text>
+      <!-- 出处：字号同样按长度自适应（优先压成一行，太长才两行） -->
+      <div class="from-box" if="{{showFrom}}">
+        <text class="from-text sz28" if="{{fromSize == 28}}">{{currentFrom}}</text>
+        <text class="from-text sz24" if="{{fromSize == 24}}">{{currentFrom}}</text>
+        <text class="from-text sz20" if="{{fromSize == 20}}">{{currentFrom}}</text>
+        <text class="from-text sz17" if="{{fromSize == 17}}">{{currentFrom}}</text>
+        <text class="from-text sz14" if="{{fromSize == 14}}">{{currentFrom}}</text>
+        <text class="from-text sz12" if="{{fromSize == 12}}">{{currentFrom}}</text>
+      </div>
     </div>
 
     <!-- 主操作：#0D6EFF 强调色按钮 -->
@@ -130,16 +138,22 @@
   .sz14 { font-size: 14px; }
   .sz12 { font-size: 12px; }
 
-  /* 出处：28px 白 60% ≈ #999999 */
+  /* 出处：白 60% ≈ #999999；字号跟着正文档位走（复用上面的 .szN），lines:2 只作安全上限 */
+  .from-box {
+    width: 100%;
+    flex-direction: column;
+    align-items: flex-end;
+    margin-top: 8px;
+  }
+
   .from-text {
-    font-size: 28px;
     color: #999999;
     text-align: right;
     width: 100%;
     lines: 2;
     text-overflow: ellipsis;
-    margin-top: 8px;
   }
+
 
   /* 主操作：#0D6EFF 强调色胶囊按钮（比卡片矮一档，把高度让给正文）
      圆角写 26 = 高度的一半（真胶囊）；之前写 999 会被钳制，看着像半个胶囊 */
@@ -187,11 +201,13 @@
   const CARD_PAD_V = 20;      // card padding 10*2
   const HINT_H = 30;          // hint 行高 + margin（仅 showHint 时占位）
 
-  // 出处行（CSS 里 lines:2，28px）
-  const FROM_FONT = 28;
-  const FROM_LINE_H = 36;
+  // 出处字号 = 正文档位「往下退一档」（32->28 正对应设计稿的标题 32 / 次要 28；
+  // 正文缩到 14 时出处就跟着 12，不会出现出处比正文还大）。
+  // 与 SIZES 一一对应，改 SIZES 时这张表要同步。
+  const FROM_OF_BODY = [28, 24, 20, 17, 14, 12, 12];
+  const FROM_LINES_MAX = 2;      // 出处最多两行，超出走省略号
+  const FROM_LINE_RATIO = 1.5;   // 出处行高/字号
   const FROM_MARGIN = 8;
-  const MAX_FROM_LINES = 2;
 
   // 字号档位（与模板 if 条件、上面的 .szN 类一一对应）
   const SIZES = [32, 28, 24, 20, 17, 14, 12];
@@ -207,6 +223,7 @@
       currentText: '加载中…',
       currentFrom: '',
       showFrom: false,
+      fromSize: 28,
       hint: '',
       showHint: false,
       screenWidth: 0,
@@ -277,32 +294,57 @@
       return n;
     },
 
-    /** 出处折行后占的高度 */
-    fromHeight() {
-      const s = this.currentFrom || '';
-      if (!s) {
+    /** 出处要占几行（给出的字号下） */
+    linesAtSize(s, f) {
+      const w = (this.screenWidth || FALLBACK_SCREEN_W) - TEXT_INSET;
+      if (!s || w <= 0 || !f) {
         return 0;
       }
-      const w = (this.screenWidth || FALLBACK_SCREEN_W) - TEXT_INSET;
-      if (w <= 0) {
-        return FROM_LINE_H + FROM_MARGIN;
-      }
-      let lines = Math.ceil(this.unitsOf(s) * FROM_FONT / w);
+      let lines = Math.ceil(this.unitsOf(s) * f / w);
       if (lines < 1) {
         lines = 1;
       }
-      if (lines > MAX_FROM_LINES) {
-        lines = MAX_FROM_LINES;
+      if (lines > FROM_LINES_MAX) {
+        lines = FROM_LINES_MAX;
       }
-      return lines * FROM_LINE_H + FROM_MARGIN;
+      return lines;
     },
 
-    /** 正文可用高度（只用来挑字号，不绑到样式上） */
-    areaHeight() {
+    /**
+     * 出处字号：跟着正文档位走（往下退一档）；名字实在太长再逐步往下让，
+     * 保证不超过两行。
+     */
+    fromSizeFor(bodySize) {
+      const s = this.currentFrom || '';
+      let idx = 0;
+      for (let i = 0; i < SIZES.length; i++) {
+        if (SIZES[i] === bodySize) {
+          idx = i;
+          break;
+        }
+      }
+      for (let i = idx; i < SIZES.length; i++) {
+        if (this.linesAtSize(s, FROM_OF_BODY[i]) <= FROM_LINES_MAX) {
+          return FROM_OF_BODY[i];
+        }
+      }
+      return SIZES[SIZES.length - 1];
+    },
+
+    /** 出处占的高度（按它自己的字号算，用于给正文留高度） */
+    fromHeight() {
+      const lines = this.linesAtSize(this.currentFrom, this.fromSize);
+      if (!lines) {
+        return 0;
+      }
+      return lines * (this.fromSize || SIZES[0]) * FROM_LINE_RATIO + FROM_MARGIN;
+    },
+
+    /** 正文可用高度（只用来挑字号，不绑到样式上）；srcH 由调用方传入以免循环依赖 */
+    areaHeight(srcH) {
       const sh = this.screenHeight || FALLBACK_SCREEN_H;
       const hint = this.showHint ? HINT_H : 0;
-      const srcH = this.showFrom ? this.fromHeight() : 0;
-      const h = sh - PAGE_PAD_V - TOPBAR_H - BTN_H - hint - CARD_PAD_V - srcH;
+      const h = sh - PAGE_PAD_V - TOPBAR_H - BTN_H - hint - CARD_PAD_V - (srcH || 0);
       return h > MIN_AREA_H ? h : MIN_AREA_H;
     },
 
@@ -311,13 +353,13 @@
      * 字号 f 时每行放 W/f 个汉字单位，需要 ceil(units*f/W) 行，
      * 总高 ≈ 行数 * f * LINE_RATIO ≤ H。
      */
-    pickSize(text) {
+    pickSize(text, srcH) {
       if (!text) {
         return SIZES[0];
       }
       const units = this.unitsOf(text);
       const w = (this.screenWidth || FALLBACK_SCREEN_W) - TEXT_INSET;
-      const h = this.areaHeight();
+      const h = this.areaHeight(srcH);
       if (units <= 0 || w <= 0 || h <= 0) {
         return SIZES[0];
       }
@@ -331,8 +373,18 @@
       return SIZES[SIZES.length - 1];
     },
 
+    /**
+     * 正文字号与出处字号互相依赖（出处高度占正文的地方），做两遍：
+     * 第一遍估正文 -> 得出处 -> 用出处实际高度再算一次正文 -> 出处跟着新正文走。
+     * 第二遍的预留高度不小于最终实际高度，所以不会溢出。
+     */
     applySize() {
-      this.textSize = this.pickSize(this.currentText);
+      const text = this.currentText;
+      const first = this.pickSize(text, 0);
+      this.fromSize = this.fromSizeFor(first);
+      const second = this.pickSize(text, this.fromHeight());
+      this.fromSize = this.fromSizeFor(second);
+      this.textSize = second;
     },
 
     /** 取一条随机句子并刷新界面。全程 try/catch，避免异常导致白屏。 */
