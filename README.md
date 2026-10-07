@@ -24,7 +24,16 @@
 |---|---|---|---|
 | `io.github.micasiliconneko.hikoto.v1.6.5.rpk` | 7000 | 753 KB | 数据分 8 个文件加载，自签正式证书签名 |
 
-安装：使用Astobox安装。
+安装：点下面的徽标直接用 AstroBox 打开，或在 AstroBox 里搜索「一言」。
+
+<p>
+  <a href="https://astrobox.online/open?source=res&amp;res=io.github.micasiliconneko.hikoto&amp;provider=official" target="_blank" rel="noopener noreferrer">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://astrobox.online/goab/en/black.svg">
+      <img src="https://astrobox.online/goab/en/white.svg" alt="Get it on AstroBox" height="46">
+    </picture>
+  </a>
+</p>
 
 ## 数据规模与出处覆盖
 
